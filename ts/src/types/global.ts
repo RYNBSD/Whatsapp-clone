@@ -16,6 +16,8 @@ declare global {
 
       COOKIE_PARSER: string;
       COOKIE_ENCRYPT: string;
+
+      JWT_SECRET: string;
     }
   }
 }

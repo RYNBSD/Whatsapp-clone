@@ -41,6 +41,7 @@ export default [
     rules: {
       "no-var": "warn",
       "@typescript-eslint/no-namespace": "warn",
+      "@typescript-eslint/no-explicit-any": "warn"
     },
   },
   {

@@ -13,4 +13,5 @@ export const session = expressSession({
   saveUninitialized: false,
   secret: process.env.SESSION_SECRET,
   cookie: options.cookie,
+  proxy: true,
 });

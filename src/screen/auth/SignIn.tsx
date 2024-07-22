@@ -73,7 +73,9 @@ export default function SignUp({ navigation }: Props) {
           <Button
             mode="contained"
             style={{ width: "100%", borderRadius: 12 }}
-            onPress={() => {}}
+            onPress={() => {
+              navigation.navigate("App", { screen: "Chat" });
+            }}
           >
             Submit
           </Button>

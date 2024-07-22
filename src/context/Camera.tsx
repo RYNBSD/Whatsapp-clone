@@ -1,0 +1,251 @@
+import { MaterialIcons } from "@expo/vector-icons";
+import type { EventArg, NavigationAction } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
+import type {
+  CameraType,
+  FlashMode,
+  PermissionResponse,
+  CameraMode,
+} from "expo-camera";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import type { ElementRef, ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { Alert, Platform, View } from "react-native";
+import { IconButton, SegmentedButtons } from "react-native-paper";
+
+type CameraValue = {
+  isOpen: boolean;
+  permission: PermissionResponse | null;
+  mode: CameraMode;
+  uri: string;
+  open: () => void;
+  close: () => void;
+  pictureMode: () => void;
+  videoMode: () => void;
+};
+
+const CameraContext = createContext<CameraValue | null>(null);
+
+export default function CameraProvider({ children }: { children: ReactNode }) {
+  const navigation = useNavigation();
+  const cameraRef = useRef<ElementRef<typeof CameraView>>(null);
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mode, setMode] = useState<CameraMode>("picture");
+  const [facing, setFacing] = useState<CameraType>("back");
+  const [flash, setFlash] = useState<FlashMode>("off");
+  const [permission, requestPermission] = useCameraPermissions();
+
+  const [uri, setUri] = useState<string>("");
+
+  const open = useCallback(() => setIsOpen(true), []);
+  const close = useCallback(() => setIsOpen(false), []);
+
+  const pictureMode = useCallback(() => setMode("picture"), []);
+  const videoMode = useCallback(() => setMode("video"), []);
+
+  useEffect(() => {
+    const callback = (
+      e: EventArg<
+        "beforeRemove",
+        true,
+        {
+          action: NavigationAction;
+        }
+      >,
+    ) => {
+      e.preventDefault();
+      close();
+    };
+
+    navigation.addListener("beforeRemove", callback);
+    return () => navigation.removeListener("beforeRemove", callback);
+  }, [close, navigation]);
+
+  useEffect(() => {
+    (async () => {
+      if (!isOpen || !permission || permission.granted) return;
+      const requestedPermission = await requestPermission();
+      if (!requestedPermission.granted) close();
+    })();
+  }, [close, isOpen, permission, requestPermission]);
+
+  return (
+    <CameraContext.Provider
+      value={{
+        isOpen,
+        permission,
+        mode,
+        uri,
+        open,
+        close,
+        pictureMode,
+        videoMode,
+      }}
+    >
+      {isOpen ? (
+        <View style={{ flex: 1 }}>
+          <CameraView
+            ref={cameraRef}
+            style={{ flex: 1 }}
+            autofocus="on"
+            focusable
+            mode={mode}
+            flash={flash}
+            facing={facing}
+            onMountError={(e) => {
+              Alert.alert("Can't open the camera", e.message);
+              close();
+            }}
+          >
+            <View
+              style={{
+                flex: 1,
+                flexDirection: "column",
+                justifyContent: "space-between",
+                padding: 5,
+              }}
+            >
+              <View
+                style={{
+                  width: "100%",
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <IconButton
+                  mode="contained"
+                  onPress={close}
+                  icon={(props) => <MaterialIcons {...props} name="close" />}
+                />
+                <IconButton
+                  mode="contained"
+                  onPress={() => {
+                    setFlash((prev) =>
+                      prev === "off"
+                        ? "on"
+                        : prev === "on"
+                          ? "auto"
+                          : prev === "auto"
+                            ? "off"
+                            : prev,
+                    );
+                  }}
+                  icon={(props) => (
+                    <MaterialIcons {...props} name={`flash-${flash}`} />
+                  )}
+                />
+              </View>
+              <View
+                style={{
+                  width: "100%",
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <IconButton
+                  mode="contained"
+                  onPress={async () => {}}
+                  icon={(props) => (
+                    <MaterialIcons {...props} name="insert-photo" />
+                  )}
+                />
+                <IconButton
+                  mode="contained"
+                  onPress={async () => {
+                    if (mode === "picture") {
+                      const picture = await cameraRef.current?.takePictureAsync(
+                        {
+                          quality: 1,
+                          imageType: "png",
+                        },
+                      );
+                      setUri(picture?.uri ?? "");
+                    }
+
+                    if (mode === "video" && !isRecording) {
+                      setIsRecording(true);
+                      const video = await cameraRef.current?.recordAsync();
+                      setUri(video?.uri ?? "");
+                    }
+
+                    if (mode === "video" && isRecording) {
+                      setIsRecording(false);
+                      cameraRef.current?.stopRecording();
+                    }
+                  }}
+                  icon={(props) => (
+                    <MaterialIcons
+                      {...props}
+                      name={
+                        mode === "picture"
+                          ? "camera"
+                          : isRecording
+                            ? "videocam-off"
+                            : "videocam"
+                      }
+                    />
+                  )}
+                />
+                <IconButton
+                  mode="contained"
+                  icon={(props) => (
+                    <MaterialIcons
+                      onPress={() => {
+                        setFacing((prev) =>
+                          prev === "back" ? "front" : "back",
+                        );
+                      }}
+                      {...props}
+                      name={
+                        Platform.OS === "ios"
+                          ? "flip-camera-ios"
+                          : "flip-camera-android"
+                      }
+                    />
+                  )}
+                />
+              </View>
+            </View>
+          </CameraView>
+          <View
+            style={{
+              width: "50%",
+              paddingVertical: 5,
+              marginHorizontal: "auto",
+            }}
+          >
+            <SegmentedButtons
+              value={mode}
+              onValueChange={(value) => setMode(value as CameraMode)}
+              buttons={[
+                {
+                  value: "video",
+                  label: "Video",
+                },
+                {
+                  value: "picture",
+                  label: "Picture",
+                },
+              ]}
+            />
+          </View>
+        </View>
+      ) : (
+        children
+      )}
+    </CameraContext.Provider>
+  );
+}
+
+export const useCamera = () => useContext(CameraContext);

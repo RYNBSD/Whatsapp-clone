@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useState } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { View } from "react-native";
 import {
   TextInput,
@@ -16,6 +16,7 @@ import { ScreenProps } from "../../types";
 
 export default function SignUp({ navigation }: Props) {
   const theme = useTheme();
+  const [_isPending, startTransition] = useTransition();
   const [fields, setFields] = useState({
     username: "",
     email: "",

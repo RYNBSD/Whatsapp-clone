@@ -1,7 +1,12 @@
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createMaterialBottomTabNavigator } from "react-native-paper/react-navigation";
 
-const Stack = createNativeStackNavigator();
+const Tab = createMaterialBottomTabNavigator();
 
 export default function App() {
-  return <Stack.Navigator></Stack.Navigator>;
+  return (
+    <Tab.Navigator>
+      <Tab.Screen name="Chat" component={require("./Chat").default} />
+      <Tab.Screen name="Setting" component={require("./Setting").default} />
+    </Tab.Navigator>
+  );
 }

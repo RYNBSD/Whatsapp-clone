@@ -19,15 +19,15 @@ export default function Screen() {
       style={{
         flex: 1,
         backgroundColor: theme.colors.background,
-        paddingTop: insets.top,
+        // paddingTop: insets.top,
         paddingBottom: insets.bottom,
         paddingLeft: insets.left,
         paddingRight: insets.right,
       }}
     >
       <MediaLibraryProvider>
-        <CameraProvider>
-          <AudioProvider>
+        <AudioProvider>
+          <CameraProvider>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
               <Stack.Screen
                 name="Auth"
@@ -38,8 +38,8 @@ export default function Screen() {
                 component={require("./app/index").default}
               />
             </Stack.Navigator>
-          </AudioProvider>
-        </CameraProvider>
+          </CameraProvider>
+        </AudioProvider>
       </MediaLibraryProvider>
     </View>
   );

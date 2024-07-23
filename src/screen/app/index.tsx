@@ -1,12 +1,14 @@
 import { createMaterialBottomTabNavigator } from "react-native-paper/react-navigation";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
-import { Appbar } from "react-native-paper";
-import { useCamera } from "../../context";
+import { Appbar, Menu } from "react-native-paper";
+import { useAudio, useCamera, useMediaLibrary } from "../../context";
 
 const Tab = createMaterialBottomTabNavigator();
 
 export default function App() {
-  const { open } = useCamera()!;
+  const { open, checkPermission: checkCameraPermission } = useCamera()!;
+  const { checkPermission: checkAudioPermission } = useAudio()!;
+  const { checkPermission: checkMediaLibraryPermission } = useMediaLibrary()!;
 
   return (
     <>
@@ -14,7 +16,19 @@ export default function App() {
         <Appbar.Content title="Whatsapp" />
         <Appbar.Action
           icon={(props) => (
-            <MaterialIcons {...props} name="camera" size={24} onPress={open} />
+            <MaterialIcons
+              {...props}
+              name="camera"
+              size={24}
+              onPress={async () => {
+                const isCameraAllowed = await checkCameraPermission();
+                const isAudioAllowed = await checkAudioPermission();
+                const isMediaLibraryAllowed =
+                  await checkMediaLibraryPermission();
+                if (isCameraAllowed && isAudioAllowed && isMediaLibraryAllowed)
+                  open();
+              }}
+            />
           )}
         />
         <Appbar.Action

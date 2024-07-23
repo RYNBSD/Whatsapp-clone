@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useEffect } from "react";
+import { createContext, useCallback, useContext } from "react";
 import {
   createAssetAsync,
   PermissionResponse,
@@ -8,6 +8,7 @@ import {
 
 type MediaLibraryValue = {
   permission: PermissionResponse | null;
+  checkPermission: () => Promise<boolean>;
 };
 
 const MediaLibraryContext = createContext<MediaLibraryValue | null>(null);
@@ -19,17 +20,30 @@ export default function MediaLibraryProvider({
 }) {
   const [permission, requestPermission] = usePermissions();
 
-  useEffect(() => {
-    if (!permission || permission.granted) return;
-    requestPermission();
+  const checkPermission = useCallback(async () => {
+    if (permission && permission.granted) return true;
+    const requestedPermission = await requestPermission();
+    return requestedPermission.granted;
   }, [permission, requestPermission]);
 
-  const storeAsset = useCallback(async (uri: string) => {
-    return createAssetAsync(uri);
-  }, []);
+  // useEffect(() => {
+  //   if (!permission || permission.granted) return;
+  //   (async () => {
+  //     const requestedPermission = await requestPermission();
+  //   })();
+  // }, [permission, requestPermission]);
+
+  const storeAsset = useCallback(
+    async (uri: string) => {
+      const isAllowed = await checkPermission();
+      if (!isAllowed) return;
+      return createAssetAsync(uri);
+    },
+    [checkPermission],
+  );
 
   return (
-    <MediaLibraryContext.Provider value={{ permission }}>
+    <MediaLibraryContext.Provider value={{ permission, checkPermission }}>
       {children}
     </MediaLibraryContext.Provider>
   );

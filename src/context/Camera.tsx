@@ -19,6 +19,8 @@ import {
 } from "react";
 import { Alert, Platform, View } from "react-native";
 import { IconButton, SegmentedButtons } from "react-native-paper";
+import { useAudio } from "./Audio";
+import { useMediaLibrary } from "./MediaLibrary";
 
 type CameraValue = {
   isOpen: boolean;
@@ -29,6 +31,7 @@ type CameraValue = {
   close: () => void;
   pictureMode: () => void;
   videoMode: () => void;
+  checkPermission: () => Promise<boolean>;
 };
 
 const CameraContext = createContext<CameraValue | null>(null);
@@ -43,6 +46,9 @@ export default function CameraProvider({ children }: { children: ReactNode }) {
   const [facing, setFacing] = useState<CameraType>("back");
   const [flash, setFlash] = useState<FlashMode>("off");
   const [permission, requestPermission] = useCameraPermissions();
+
+  const { checkPermission: checkMediaLibraryPermission } = useMediaLibrary()!;
+  const { checkPermission: checkAudioPermission } = useAudio()!;
 
   const [uri, setUri] = useState<string>("");
 
@@ -70,13 +76,19 @@ export default function CameraProvider({ children }: { children: ReactNode }) {
     return () => navigation.removeListener("beforeRemove", callback);
   }, [close, navigation]);
 
-  useEffect(() => {
-    (async () => {
-      if (!isOpen || !permission || permission.granted) return;
-      const requestedPermission = await requestPermission();
-      if (!requestedPermission.granted) close();
-    })();
-  }, [close, isOpen, permission, requestPermission]);
+  // useEffect(() => {
+  //   if (!isOpen || !permission || permission.granted) return;
+  //   (async () => {
+  //     const requestedPermission = await requestPermission();
+  //     if (!requestedPermission.granted) close();
+  //   })();
+  // }, [close, isOpen, permission, requestPermission]);
+
+  const checkPermission = useCallback(async () => {
+    if (permission && permission.granted) return true;
+    const requestedPermission = await requestPermission();
+    return requestedPermission.granted;
+  }, [permission, requestPermission]);
 
   return (
     <CameraContext.Provider
@@ -89,6 +101,7 @@ export default function CameraProvider({ children }: { children: ReactNode }) {
         close,
         pictureMode,
         videoMode,
+        checkPermission,
       }}
     >
       {isOpen ? (
@@ -227,7 +240,8 @@ export default function CameraProvider({ children }: { children: ReactNode }) {
           >
             <SegmentedButtons
               value={mode}
-              onValueChange={(value) => setMode(value as CameraMode)}
+              // @ts-ignore
+              onValueChange={async (value: CameraMode) => setMode(value)}
               buttons={[
                 {
                   value: "video",

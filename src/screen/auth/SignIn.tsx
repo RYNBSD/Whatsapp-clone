@@ -1,5 +1,5 @@
 import { useCallback, useState, useTransition } from "react";
-import { View } from "react-native";
+import { Alert, View } from "react-native";
 import {
   TextInput,
   Button,
@@ -11,6 +11,7 @@ import {
 import isEmail from "validator/lib/isEmail";
 import isEmpty from "validator/lib/isEmpty";
 import { ScreenProps } from "../../types";
+import { request } from "../../util/http";
 
 export default function SignUp({ navigation }: Props) {
   const theme = useTheme();
@@ -73,8 +74,19 @@ export default function SignUp({ navigation }: Props) {
           <Button
             mode="contained"
             style={{ width: "100%", borderRadius: 12 }}
-            onPress={() => {
-              navigation.navigate("App", { screen: "Chat" });
+            onPress={async () => {
+              const res = await request(`/auth/sign-in`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(fields),
+              });
+
+              if (res.ok) return navigation.navigate("App", { screen: "Chat" });
+
+              const json = await res.json();
+              Alert.alert("Error", json.data?.message ?? "Can't Sign up");
             }}
           >
             Submit

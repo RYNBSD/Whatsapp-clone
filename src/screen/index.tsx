@@ -6,6 +6,7 @@ import {
   AudioProvider,
   CameraProvider,
   MediaLibraryProvider,
+  useAuth,
 } from "../context";
 
 const Stack = createNativeStackNavigator();
@@ -13,6 +14,8 @@ const Stack = createNativeStackNavigator();
 export default function Screen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+
+  const { user } = useAuth()!;
 
   return (
     <View
@@ -29,14 +32,17 @@ export default function Screen() {
         <AudioProvider>
           <CameraProvider>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-              <Stack.Screen
-                name="Auth"
-                component={require("./auth/index").default}
-              />
-              <Stack.Screen
-                name="App"
-                component={require("./app/index").default}
-              />
+              {user === null ? (
+                <Stack.Screen
+                  name="Auth"
+                  component={require("./auth/index").default}
+                />
+              ) : (
+                <Stack.Screen
+                  name="App"
+                  component={require("./app/index").default}
+                />
+              )}
             </Stack.Navigator>
           </CameraProvider>
         </AudioProvider>

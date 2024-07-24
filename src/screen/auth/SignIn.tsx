@@ -11,7 +11,7 @@ import {
 import isEmail from "validator/lib/isEmail";
 import isEmpty from "validator/lib/isEmpty";
 import { ScreenProps } from "../../types";
-import { request } from "../../util/http";
+import { useAuth } from "../../context";
 
 export default function SignUp({ navigation }: Props) {
   const theme = useTheme();
@@ -20,6 +20,8 @@ export default function SignUp({ navigation }: Props) {
     email: "",
     password: "",
   });
+
+  const { signIn } = useAuth()!;
 
   const onChangeText = useCallback((name: string, text: string) => {
     startTransition(() => {
@@ -75,18 +77,11 @@ export default function SignUp({ navigation }: Props) {
             mode="contained"
             style={{ width: "100%", borderRadius: 12 }}
             onPress={async () => {
-              const res = await request(`/auth/sign-in`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(fields),
+              const formData = new FormData();
+              Object.entries(fields).forEach(([key, value]) => {
+                formData.append(key, value);
               });
-
-              if (res.ok) return navigation.navigate("App", { screen: "Chat" });
-
-              const json = await res.json();
-              Alert.alert("Error", json.data?.message ?? "Can't Sign up");
+              await signIn(formData);
             }}
           >
             Submit

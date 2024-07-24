@@ -13,7 +13,7 @@ import isMobilePhone from "validator/lib/isMobilePhone";
 import isEmpty from "validator/lib/isEmpty";
 import isStrongPassword from "validator/lib/isStrongPassword";
 import { ScreenProps } from "../../types";
-import { request } from "../../util/http";
+import { useAuth } from "../../context";
 
 export default function SignUp({ navigation }: Props) {
   const theme = useTheme();
@@ -25,6 +25,8 @@ export default function SignUp({ navigation }: Props) {
     phone: "",
     password: "",
   });
+
+  const { signUp } = useAuth()!;
 
   const onChangeText = useCallback((name: string, text: string) => {
     startTransition(() => {
@@ -120,21 +122,12 @@ export default function SignUp({ navigation }: Props) {
             mode="contained"
             style={{ width: "100%", borderRadius: 12 }}
             onPress={async () => {
-              const res = await request("/auth/sign-up", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  ...fields,
-                  phone: fields.country + fields.phone,
-                }),
+              const formData = new FormData();
+              const body = { ...fields, phone: fields.country + fields.phone };
+              Object.entries(body).forEach(([key, value]) => {
+                formData.append(key, value);
               });
-
-              if (res.ok) return navigation.navigate("SignIn");
-
-              const json = await res.json();
-              Alert.alert("Error", json.data?.message ?? "Can't Sign up");
+              await signUp(formData);
             }}
           >
             Submit

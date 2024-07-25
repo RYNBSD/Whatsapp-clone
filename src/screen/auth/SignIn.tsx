@@ -1,5 +1,5 @@
 import { useCallback, useState, useTransition } from "react";
-import { Alert, View } from "react-native";
+import { View } from "react-native";
 import {
   TextInput,
   Button,
@@ -12,6 +12,7 @@ import isEmail from "validator/lib/isEmail";
 import isEmpty from "validator/lib/isEmpty";
 import { ScreenProps } from "../../types";
 import { useAuth } from "../../context";
+import { object2formData } from "../../util";
 
 export default function SignUp({ navigation }: Props) {
   const theme = useTheme();
@@ -76,13 +77,7 @@ export default function SignUp({ navigation }: Props) {
           <Button
             mode="contained"
             style={{ width: "100%", borderRadius: 12 }}
-            onPress={async () => {
-              const formData = new FormData();
-              Object.entries(fields).forEach(([key, value]) => {
-                formData.append(key, value);
-              });
-              await signIn(formData);
-            }}
+            onPress={() => signIn(object2formData(fields))}
           >
             Submit
           </Button>

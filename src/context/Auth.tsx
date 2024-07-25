@@ -1,9 +1,18 @@
 import type { ReactNode } from "react";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { ParamListBase } from "@react-navigation/native";
-import { createContext, useCallback, useContext, useState } from "react";
-import { request } from "../util/http";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useNavigation } from "@react-navigation/native";
+import setCookieParser from "set-cookie-parser";
+import * as SecureStore from "expo-secure-store";
+import { request } from "../util";
 import { Alert } from "react-native";
 
 type User = {
@@ -26,6 +35,38 @@ const AuthContext = createContext<AuthValue | null>(null);
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
   const [user, setUser] = useState<User | null>(null);
+  const authorization = useMemo(() => "authorization", []);
+
+  const getJWT = useCallback(
+    (headers: Headers) => {
+      const cookies = setCookieParser(headers.get("set-cookie") ?? "");
+      if (cookies.length === 0) return;
+
+      const token = cookies.find((cookie) => cookie.name === authorization);
+      if (typeof token === "undefined" || token.value.length === 0) return;
+
+      SecureStore.setItem(authorization, token.value);
+    },
+    [authorization],
+  );
+
+  useEffect(() => {
+    const token = SecureStore.getItem(authorization) ?? "";
+    if (token.length === 0) return;
+
+    (async () => {
+      const res = await request("/auth/me", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) return;
+
+      const json = await res.json();
+      setUser(json.data.user);
+    })();
+  }, [authorization]);
 
   const signUp = useCallback(
     async (body: FormData) => {
@@ -33,6 +74,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
         body,
       });
+      getJWT(res.headers);
       const json = await res.json();
 
       if (res.ok) {
@@ -42,7 +84,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         Alert.alert("Error", json.data?.message ?? "Can't Sign up");
       }
     },
-    [navigation],
+    [getJWT, navigation],
   );
 
   const signIn = useCallback(
@@ -51,6 +93,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
         body,
       });
+      getJWT(res.headers);
       const json = await res.json();
 
       if (res.ok) {
@@ -60,11 +103,12 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         Alert.alert("Error", json.data?.message ?? "Can't Sign up");
       }
     },
-    [navigation],
+    [getJWT, navigation],
   );
 
   const signOut = useCallback(async () => {
     const res = await request("/auth/sign-out", { method: "POST" });
+    getJWT(res.headers);
     if (res.ok) {
       setUser(null);
       navigation.navigate("Auth", { screen: "SignIn" });
@@ -72,7 +116,34 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       const json = await res.json();
       Alert.alert("Error", json.data?.message ?? "Can't Sign up");
     }
-  }, [navigation]);
+  }, [getJWT, navigation]);
+
+  useEffect(() => {
+    const delay = 6000; // 1 minute
+
+    const interval = setInterval(async () => {
+      const controller = new AbortController();
+
+      const timeout = setTimeout(() => {
+        controller.abort();
+      }, delay);
+
+      const res = await request("/auth/status", { signal: controller.signal });
+      const userKeys = Object.keys(user ?? {});
+
+      // user exists and response ok or user don't exists and bad response
+      if ((res.ok && userKeys.length > 0) || (!res.ok && userKeys.length === 0))
+        return;
+      else if (res.ok && userKeys.length === 0) return signOut();
+      else if (!res.ok && userKeys.length > 0) return setUser(null);
+
+      clearTimeout(timeout);
+    }, delay);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [signOut, user]);
 
   return (
     <AuthContext.Provider value={{ user, signUp, signIn, signOut }}>

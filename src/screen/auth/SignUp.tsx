@@ -1,5 +1,5 @@
 import { useCallback, useState, useTransition } from "react";
-import { Alert, View } from "react-native";
+import { View } from "react-native";
 import {
   TextInput,
   Button,
@@ -14,6 +14,7 @@ import isEmpty from "validator/lib/isEmpty";
 import isStrongPassword from "validator/lib/isStrongPassword";
 import { ScreenProps } from "../../types";
 import { useAuth } from "../../context";
+import { object2formData } from "../../util";
 
 export default function SignUp({ navigation }: Props) {
   const theme = useTheme();
@@ -121,14 +122,14 @@ export default function SignUp({ navigation }: Props) {
           <Button
             mode="contained"
             style={{ width: "100%", borderRadius: 12 }}
-            onPress={async () => {
-              const formData = new FormData();
-              const body = { ...fields, phone: fields.country + fields.phone };
-              Object.entries(body).forEach(([key, value]) => {
-                formData.append(key, value);
-              });
-              await signUp(formData);
-            }}
+            onPress={() =>
+              signUp(
+                object2formData({
+                  ...fields,
+                  phone: fields.country + fields.phone,
+                }),
+              )
+            }
           >
             Submit
           </Button>

@@ -13,7 +13,7 @@ const Stack = createNativeStackNavigator();
 
 export default function Screen() {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
+  const safeAreaInsets = useSafeAreaInsets();
 
   const { user } = useAuth()!;
 
@@ -21,11 +21,10 @@ export default function Screen() {
     <View
       style={{
         flex: 1,
+        paddingLeft: safeAreaInsets.left,
+        paddingRight: safeAreaInsets.right,
+        paddingBottom: safeAreaInsets.bottom,
         backgroundColor: theme.colors.background,
-        // paddingTop: insets.top,
-        paddingBottom: insets.bottom,
-        paddingLeft: insets.left,
-        paddingRight: insets.right,
       }}
     >
       <MediaLibraryProvider>

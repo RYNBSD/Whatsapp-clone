@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
+import type { Socket } from "socket.io";
 import type { ResponseFailed, ResponseLocals } from "../types/index.js";
 import { StatusCodes } from "http-status-codes";
 import { BaseError } from "../error/index.js";
@@ -39,6 +40,33 @@ export function handleAsync(fn: HandleAsyncFn) {
       }
     } catch (error) {
       return next(error);
+    }
+  };
+}
+
+type HandleSocketFn = (socket: Socket, ...args: any[]) => Promise<void>;
+
+export function handleSocket(fn: HandleSocketFn) {
+  return async (socket: Socket, ...args: any[]) => {
+    try {
+      const transaction = await sequelize.transaction();
+      try {
+        await fn(socket, ...args);
+        await transaction.commit();
+      } catch (error) {
+        await transaction.rollback();
+      }
+    } catch (error) { /* empty */ }
+  };
+}
+
+export function handleSocketHandshake(middleware: RequestHandler) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const isHandshake = req?._query?.sid === undefined;
+    if (isHandshake) {
+      middleware(req, res, next);
+    } else {
+      next();
     }
   };
 }

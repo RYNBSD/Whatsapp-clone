@@ -1,6 +1,7 @@
 import path from "node:path";
 import process from "node:process";
 import url from "node:url";
+import { Server as SocketServer } from "socket.io";
 import * as db from "./config/db.js";
 import { BaseError } from "./error/index.js";
 import { ENV } from "./constant/index.js";
@@ -25,7 +26,10 @@ process.on("uncaughtException", async (error) => {
   process.exit(1);
 });
 
-app.listen(ENV.NODE.PORT, () => {
+const server = app.listen(ENV.NODE.PORT, () => {
   if (global.isProduction) return;
   console.log(`Listening on port ${ENV.NODE.PORT}`.white.bgGreen);
 });
+
+global.io = new SocketServer(server);
+await import("./socket/index.js");

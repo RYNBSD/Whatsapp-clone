@@ -1,12 +1,14 @@
 /* eslint-disable @typescript-eslint/no-namespace */
 /* eslint-disable no-var */
 import type { Sequelize, Transaction } from "sequelize";
+import type { Server as SocketServer } from "socket.io";
 import { Tables } from "./model.js";
 
 type RequestTransaction = { transaction?: Transaction };
 type PassportUser = Tables["User"];
 
 declare global {
+  var io: SocketServer;
   var sequelize: Sequelize;
   var isProduction: boolean;
   var __root: string;
@@ -31,6 +33,12 @@ declare global {
     interface Request extends RequestTransaction {}
 
     interface User extends PassportUser {}
+  }
+
+  interface Socket {
+    locals: {
+      transaction: Transaction
+    }
   }
 }
 

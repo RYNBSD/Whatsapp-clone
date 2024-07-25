@@ -34,15 +34,10 @@ if (!global.isProduction) {
   app.use(errorhandler());
 }
 
-const {
-  app: { session, limiter },
-  swagger,
-} = config;
-
 app.use(timeout(1000 * 60 * 5)); // 5 minutes
 app.use(responseTime());
 app.use(cors({ credentials: true }));
-app.use(limiter);
+app.use(config.app.limiter);
 app.use(compression({ level: 9 }));
 app.use(methodOverride(KEYS.HTTP.HEADERS.METHOD_OVERRIDE)); // default: X-HTTP-Method-Override
 app.use(morgan(global.isProduction ? "combined" : "dev"));
@@ -52,14 +47,14 @@ app.use(helmet());
 app.use(hpp());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(session);
+app.use(config.app.session);
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(requestIp.mw());
 
 app.use("/", router);
 
-const docs = swagger.init();
+const docs = config.swagger.init();
 app.use("/docs", docs.serve, docs.ui);
 
 app.all("*", async (_req, res: Response<ResponseFailed, ResponseLocals>) =>

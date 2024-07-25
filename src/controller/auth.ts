@@ -87,6 +87,8 @@ export default {
     });
   },
   async me(req: Request, res: Response<ResponseSuccess, ResponseLocals>, next: NextFunction) {
+    req.transaction = res.locals.transaction;
+
     const user = (await authenticate("bearer", req, res, next)) as Tables["User"];
 
     const { jwt } = util;
@@ -104,4 +106,8 @@ export default {
   },
   async forgotPassword(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {},
   async resetPassword(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {},
+  async status(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
+    const isAuthenticated = req.isAuthenticated();
+    res.sendStatus(isAuthenticated ? StatusCodes.OK : StatusCodes.UNAUTHORIZED);
+  },
 } as const;

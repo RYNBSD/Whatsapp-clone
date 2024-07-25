@@ -9,7 +9,7 @@ export const auth = Router();
 const { upload } = config;
 const { handleAsync } = util.fn;
 const { isUnauthenticated, isAuthenticated } = middleware.fn;
-const { signUp, signIn, signOut, me, forgotPassword, resetPassword } = controller.auth;
+const { signUp, signIn, signOut, me, forgotPassword, resetPassword, status } = controller.auth;
 
 auth.post("/sign-up", handleAsync(isUnauthenticated), handleAsync(upload.none()), handleAsync(signUp));
 
@@ -22,3 +22,5 @@ auth.post("/me", handleAsync(upload.none()), handleAsync(me));
 auth.post("/forgot-password", handleAsync(upload.none()), handleAsync(forgotPassword));
 
 auth.put("/reset-password", handleAsync(upload.none()), handleAsync(resetPassword));
+
+auth.get("/status", handleAsync(status));

@@ -3,7 +3,7 @@
 import type { Sequelize, Transaction } from "sequelize";
 import { Tables } from "./model.js";
 
-type RequestTransaction = { transaction?: Transaction }
+type RequestTransaction = { transaction?: Transaction };
 type PassportUser = Tables["User"];
 
 declare global {

@@ -36,6 +36,7 @@ if (!global.isProduction) {
 
 const {
   app: { session, limiter },
+  swagger,
 } = config;
 
 app.use(timeout(1000 * 60 * 5)); // 5 minutes
@@ -57,6 +58,9 @@ app.use(passport.session());
 app.use(requestIp.mw());
 
 app.use("/", router);
+
+const docs = swagger.init();
+app.use("/docs", docs.serve, docs.ui);
 
 app.all("*", async (_req, res: Response<ResponseFailed, ResponseLocals>) =>
   res.status(StatusCodes.NOT_FOUND).json({ success: false }),

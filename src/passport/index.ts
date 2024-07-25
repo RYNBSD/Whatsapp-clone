@@ -1,6 +1,7 @@
 import passport from "passport";
 import { model } from "../model/index.js";
 import { localStrategy } from "./local.js";
+import { bearerStrategy } from "./bearer.js";
 
 passport.serializeUser((user, done) => done(null, user.dataValues.id));
 
@@ -21,5 +22,6 @@ passport.deserializeUser((id: number, done) => {
 });
 
 passport.use(localStrategy);
+passport.use(bearerStrategy);
 
 export default passport;

@@ -1,6 +1,7 @@
 import { upload } from "./upload.js";
+import app from "./app/index.js";
+import swagger from "./swagger.js";
 import * as db from "./db.js";
 import * as options from "./options.js";
-import app from "./app/index.js";
 
-export const config = { app, db, upload, options } as const;
+export const config = { app, db, swagger, upload, options } as const;

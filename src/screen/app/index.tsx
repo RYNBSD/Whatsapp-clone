@@ -1,6 +1,6 @@
 import { createMaterialBottomTabNavigator } from "react-native-paper/react-navigation";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
-import { Appbar, Menu } from "react-native-paper";
+import { Appbar } from "react-native-paper";
 import { useAudio, useCamera, useMediaLibrary } from "../../context";
 
 const Tab = createMaterialBottomTabNavigator();
@@ -57,11 +57,20 @@ export default function App() {
           }}
         />
         <Tab.Screen
-          name="Settings"
-          component={require("./Settings").default}
+          name="Search"
+          component={require("./Search").default}
           options={{
             tabBarIcon(props) {
-              return <MaterialIcons {...props} name="settings" size={24} />;
+              return <MaterialIcons {...props} name="search" size={24} />;
+            },
+          }}
+        />
+        <Tab.Screen
+          name="Portfolio"
+          component={require("./Portfolio").default}
+          options={{
+            tabBarIcon(props) {
+              return <MaterialIcons {...props} name="person" size={24} />;
             },
           }}
         />

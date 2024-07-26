@@ -4,7 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { MD3LightTheme, PaperProvider } from "react-native-paper";
 import { enableScreens } from "react-native-screens";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AuthProvider } from "./src/context";
+import { AuthProvider, SocketProvider } from "./src/context";
 import Screen from "./src/screen";
 
 enableScreens(true);
@@ -16,7 +16,9 @@ export default function App() {
         <PaperProvider theme={MD3LightTheme}>
           <NavigationContainer>
             <AuthProvider>
-              <Screen />
+              <SocketProvider>
+                <Screen />
+              </SocketProvider>
             </AuthProvider>
           </NavigationContainer>
         </PaperProvider>

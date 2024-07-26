@@ -8,11 +8,12 @@ import {
   useEffect,
   useMemo,
   useState,
+  useTransition,
 } from "react";
 import { useNavigation } from "@react-navigation/native";
 import setCookieParser from "set-cookie-parser";
 import * as SecureStore from "expo-secure-store";
-import { request } from "../util";
+import { object2formData, request } from "../util";
 import { Alert } from "react-native";
 
 type User = {
@@ -25,17 +26,27 @@ type User = {
 
 type AuthValue = {
   user: User | null;
+  onChangeText: (key: keyof User, type: string) => void;
   signUp: (body: FormData) => Promise<void>;
   signIn: (body: FormData) => Promise<void>;
   signOut: () => Promise<void>;
+  update: () => Promise<void>;
+  remove: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthValue | null>(null);
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
+  const [_isPending, startTransition] = useTransition();
   const [user, setUser] = useState<User | null>(null);
   const authorization = useMemo(() => "authorization", []);
+
+  const onChangeText = useCallback((key: keyof User, text: string) => {
+    startTransition(() => {
+      setUser((prev) => (prev === null ? prev : { ...prev, [key]: text }));
+    });
+  }, []);
 
   const getJWT = useCallback(
     (headers: Headers) => {
@@ -81,7 +92,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         setUser(json.data.user);
         navigation.navigate("Auth", { screen: "SignIn" });
       } else {
-        Alert.alert("Error", json.data?.message ?? "Can't Sign up");
+        Alert.alert("Error", json?.data?.message ?? "Can't Sign up");
       }
     },
     [getJWT, navigation],
@@ -100,7 +111,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         setUser(json.data.user);
         navigation.navigate("App", { screen: "Chats" });
       } else {
-        Alert.alert("Error", json.data?.message ?? "Can't Sign up");
+        Alert.alert("Error", json?.data?.message ?? "Can't Sign up");
       }
     },
     [getJWT, navigation],
@@ -108,15 +119,37 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     const res = await request("/auth/sign-out", { method: "POST" });
-    getJWT(res.headers);
     if (res.ok) {
+      await SecureStore.deleteItemAsync(authorization);
       setUser(null);
       navigation.navigate("Auth", { screen: "SignIn" });
     } else {
       const json = await res.json();
-      Alert.alert("Error", json.data?.message ?? "Can't Sign up");
+      Alert.alert("Error", json?.data?.message ?? "Can't Sign up");
     }
-  }, [getJWT, navigation]);
+  }, [authorization, navigation]);
+
+  const update = useCallback(async () => {
+    const formData = object2formData(user!);
+    const res = await request("/user", {
+      method: "PUT",
+      body: formData,
+    });
+    const json = await res.json();
+    if (res.ok) setUser(json.data.user);
+    else Alert.alert("Error", json?.data?.message ?? "Can't update");
+  }, [user]);
+
+  const remove = useCallback(async () => {
+    const res = await request("/user", { method: "DELETE" });
+    if (res.ok) {
+      await SecureStore.deleteItemAsync(authorization);
+      return setUser(null);
+    }
+
+    const json = await res.json();
+    Alert.alert("Error", json?.data?.message ?? "Can't delete");
+  }, [authorization]);
 
   useEffect(() => {
     const delay = 6000; // 1 minute
@@ -129,13 +162,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       }, delay);
 
       const res = await request("/auth/status", { signal: controller.signal });
-      const userKeys = Object.keys(user ?? {});
-
-      // user exists and response ok or user don't exists and bad response
-      if ((res.ok && userKeys.length > 0) || (!res.ok && userKeys.length === 0))
-        return;
-      else if (res.ok && userKeys.length === 0) return signOut();
-      else if (!res.ok && userKeys.length > 0) return setUser(null);
+      if (!res.ok) Alert.alert("Offline", "Can't reach the server");
 
       clearTimeout(timeout);
     }, delay);
@@ -146,7 +173,9 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, [signOut, user]);
 
   return (
-    <AuthContext.Provider value={{ user, signUp, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{ user, signUp, signIn, signOut, update, remove, onChangeText }}
+    >
       {children}
     </AuthContext.Provider>
   );

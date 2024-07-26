@@ -11,7 +11,7 @@ type HandleAsyncFn = ((req: Request, res: Response<any, any>, next: NextFunction
 export function handleAsync(fn: HandleAsyncFn) {
   return async (req: Request, res: Response<ResponseFailed, ResponseLocals>, next: NextFunction) => {
     try {
-      const transaction = await sequelize.transaction();
+      const transaction = await global.sequelize.transaction();
       res.locals.transaction = transaction;
 
       try {
@@ -49,20 +49,27 @@ type HandleSocketFn = (socket: Socket, ...args: any[]) => Promise<void>;
 export function handleSocket(fn: HandleSocketFn) {
   return async (socket: Socket, ...args: any[]) => {
     try {
-      const transaction = await sequelize.transaction();
-      try {
-        await fn(socket, ...args);
-        await transaction.commit();
-      } catch (error) {
-        await transaction.rollback();
-      }
-    } catch (error) { /* empty */ }
+      const transaction = await global.sequelize.transaction();
+      const session = global.mongo.startSession();
+
+      session.startTransaction();
+      socket.locals = { transaction, session };
+
+      await fn(socket, ...args)
+        .then(() => Promise.all([transaction.commit(), session.commitTransaction()]))
+        .catch(() => Promise.all([transaction.rollback(), session.abortTransaction()]))
+        .finally(() => session.endSession());
+    } catch (error) {
+      /* empty */
+    }
   };
 }
 
 export function handleSocketHandshake(middleware: RequestHandler) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const isHandshake = req?._query?.sid === undefined;
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const isHandshake = typeof req?._query?.sid === "undefined";
     if (isHandshake) {
       middleware(req, res, next);
     } else {

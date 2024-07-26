@@ -1,10 +1,13 @@
 import path from "node:path";
 import process from "node:process";
+import http from "node:http";
 import url from "node:url";
 import { Server as SocketServer } from "socket.io";
+import { createAdapter } from "@socket.io/mongo-adapter";
 import * as db from "./config/db.js";
+import * as cache from "./config/cache.js";
 import { BaseError } from "./error/index.js";
-import { ENV } from "./constant/index.js";
+import { ENV, KEYS } from "./constant/index.js";
 
 global.isProduction = process.env.NODE_ENV === "production";
 global.__filename = url.fileURLToPath(import.meta.url);
@@ -26,10 +29,14 @@ process.on("uncaughtException", async (error) => {
   process.exit(1);
 });
 
-const server = app.listen(ENV.NODE.PORT, () => {
+const server = http.createServer(app);
+
+await cache.connect();
+global.io = new SocketServer(server);
+global.io.adapter(createAdapter(global.mongo.db().collection(KEYS.CACHE.COLLECTION.SOCKET)));
+await import("./socket/index.js");
+
+server.listen(ENV.NODE.PORT, () => {
   if (global.isProduction) return;
   console.log(`Listening on port ${ENV.NODE.PORT}`.white.bgGreen);
 });
-
-global.io = new SocketServer(server);
-await import("./socket/index.js");

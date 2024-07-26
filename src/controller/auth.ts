@@ -8,6 +8,7 @@ import { util } from "../util/index.js";
 import { APIError } from "../error/index.js";
 import { config } from "../config/index.js";
 import { authenticate } from "../passport/fn.js";
+import { ENUM } from "../constant/index.js";
 
 const { SignUp, SignIn } = schema.req.auth;
 
@@ -60,6 +61,12 @@ export default {
 
     const user = (await authenticate("local", req, res, next)) as Tables["User"];
 
+    const { UserHistory } = model;
+    await UserHistory.create(
+      { ip: req.clientIp, type: ENUM.USER_HISTORY[0], userId: user.dataValues.id },
+      { fields: ["ip", "type", "userId"], transaction: res.locals.transaction, returning: false },
+    );
+
     const { jwt } = util;
     const { options } = config;
 
@@ -94,6 +101,12 @@ export default {
 
     const { jwt } = util;
     const { options } = config;
+
+    const { UserHistory } = model;
+    await UserHistory.create(
+      { ip: req.clientIp, type: ENUM.USER_HISTORY[0], userId: user.dataValues.id },
+      { fields: ["ip", "type", "userId"], transaction: res.locals.transaction, returning: false },
+    );
 
     res
       .status(StatusCodes.OK)

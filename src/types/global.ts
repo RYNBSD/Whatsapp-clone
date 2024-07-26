@@ -2,6 +2,7 @@
 /* eslint-disable no-var */
 import type { Sequelize, Transaction } from "sequelize";
 import type { Server as SocketServer } from "socket.io";
+import type { MongoClient } from "mongodb";
 import { Tables } from "./model.js";
 
 type RequestTransaction = { transaction?: Transaction };
@@ -10,6 +11,7 @@ type PassportUser = Tables["User"];
 declare global {
   var io: SocketServer;
   var sequelize: Sequelize;
+  var mongo: MongoClient;
   var isProduction: boolean;
   var __root: string;
 
@@ -19,6 +21,7 @@ declare global {
       PORT: `${number}`;
 
       POSTGRESQL_URI: string;
+      MONGODB_URI: string;
 
       SESSION_SECRET: string;
 

@@ -1,3 +1,3 @@
-import { User } from "./user.js";
+import { User, UserHistory } from "./user.js";
 
-export const model = { User } as const;
+export const model = { User, UserHistory } as const;

@@ -5,3 +5,8 @@ export function object2formData(obj: object) {
   });
   return formData;
 }
+
+export async function uri2blob(uri: string) {
+  const res = await fetch(uri);
+  return res.blob();
+}

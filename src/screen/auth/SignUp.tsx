@@ -1,5 +1,5 @@
 import { useCallback, useState, useTransition } from "react";
-import { View } from "react-native";
+import { Alert, View } from "react-native";
 import {
   TextInput,
   Button,
@@ -7,7 +7,14 @@ import {
   useTheme,
   Card,
   HelperText,
+  TouchableRipple,
 } from "react-native-paper";
+import {
+  type ImagePickerAsset,
+  launchImageLibraryAsync,
+  MediaTypeOptions,
+} from "expo-image-picker";
+import { Image } from "expo-image";
 import isEmail from "validator/lib/isEmail";
 import isMobilePhone from "validator/lib/isMobilePhone";
 import isEmpty from "validator/lib/isEmpty";
@@ -19,6 +26,7 @@ import { object2formData } from "../../util";
 export default function SignUp({ navigation }: Props) {
   const theme = useTheme();
   const [_isPending, startTransition] = useTransition();
+  const [image, setImage] = useState<ImagePickerAsset | null>(null);
   const [fields, setFields] = useState({
     username: "",
     email: "",
@@ -54,6 +62,25 @@ export default function SignUp({ navigation }: Props) {
       >
         <Card.Title title="Sign up" titleVariant="headlineLarge" />
         <Card.Content>
+          <View style={{ width: "100%", alignItems: "center" }}>
+            <TouchableRipple
+              rippleColor={theme.colors.background}
+              onPress={async () => {
+                const result = await launchImageLibraryAsync({
+                  mediaTypes: MediaTypeOptions.Images,
+                  allowsEditing: true,
+                  quality: 1,
+                });
+                if (!result.canceled) setImage(result.assets[0]);
+              }}
+            >
+              <Image
+                source={image?.uri ?? require("../../../assets/profile.png")}
+                style={{ width: 150, height: 150, borderRadius: 75 }}
+                contentFit="cover"
+              />
+            </TouchableRipple>
+          </View>
           <View style={{ width: "100%" }}>
             <TextInput
               mode="outlined"
@@ -122,14 +149,26 @@ export default function SignUp({ navigation }: Props) {
           <Button
             mode="contained"
             style={{ width: "100%", borderRadius: 12 }}
-            onPress={() =>
-              signUp(
-                object2formData({
-                  ...fields,
-                  phone: fields.country + fields.phone,
-                }),
-              )
-            }
+            onPress={async () => {
+              if (image === null) {
+                Alert.alert("Missing", "Make sure to add image");
+                return;
+              }
+
+              const formData = object2formData({
+                ...fields,
+                phone: fields.country + fields.phone,
+              });
+
+              // @ts-ignore
+              formData.append("image", {
+                uri: image.uri,
+                name: "image.png",
+                type: image.mimeType,
+              });
+
+              await signUp(formData);
+            }}
           >
             Submit
           </Button>

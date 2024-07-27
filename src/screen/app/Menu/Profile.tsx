@@ -4,13 +4,22 @@ import {
   Card,
   HelperText,
   TextInput,
+  TouchableRipple,
   useTheme,
 } from "react-native-paper";
 import isEmpty from "validator/lib/isEmpty";
-import { useAuth } from "../../context";
+import { Image } from "expo-image";
+import {
+  type ImagePickerAsset,
+  launchImageLibraryAsync,
+  MediaTypeOptions,
+} from "expo-image-picker";
+import { useState } from "react";
+import { useAuth } from "../../../context";
 
-export default function Portfolio() {
+export default function Profile() {
   const theme = useTheme();
+  const [image, setImage] = useState<ImagePickerAsset | null>(null);
   const { user, onChangeText, update, remove } = useAuth()!;
 
   return (
@@ -20,6 +29,29 @@ export default function Portfolio() {
         style={{ backgroundColor: theme.colors.background }}
       >
         <Card.Content>
+          <View style={{ width: "100%", alignItems: "center" }}>
+            <TouchableRipple
+              rippleColor={theme.colors.background}
+              onPress={async () => {
+                const result = await launchImageLibraryAsync({
+                  mediaTypes: MediaTypeOptions.Images,
+                  allowsEditing: true,
+                  quality: 1,
+                });
+                if (!result.canceled) setImage(result.assets[0]);
+              }}
+            >
+              <Image
+                source={
+                  image !== null
+                    ? image.uri
+                    : `http://192.168.1.48:8000/${user!.image}`
+                }
+                style={{ width: 150, height: 150, borderRadius: 75 }}
+                contentFit="cover"
+              />
+            </TouchableRipple>
+          </View>
           <View style={{ width: "100%" }}>
             <TextInput
               mode="outlined"
@@ -56,7 +88,14 @@ export default function Portfolio() {
         </Card.Content>
         <Card.Actions>
           <Button onPress={remove}>Delete</Button>
-          <Button onPress={update}>Update</Button>
+          <Button
+            onPress={async () => {
+              await update(image);
+              setImage(null);
+            }}
+          >
+            Update
+          </Button>
         </Card.Actions>
       </Card>
     </View>

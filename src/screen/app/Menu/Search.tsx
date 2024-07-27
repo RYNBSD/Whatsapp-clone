@@ -1,10 +1,11 @@
+import type { ScreenProps } from "../../../types";
 import { useEffect, useState, useTransition } from "react";
 import { FlatList, View } from "react-native";
 import { Divider, Searchbar } from "react-native-paper";
-import { request } from "../../util";
-import { UserCard } from "../../components";
+import { request } from "../../../util";
+import { UserCard } from "../../../components";
 
-export default function Search() {
+export default function Search({ navigation }: ScreenProps) {
   const [users, setUsers] = useState<Record<string, any>[]>([]);
   const [search, setSearch] = useState("");
   const [_isPending, startTransition] = useTransition();
@@ -16,7 +17,7 @@ export default function Search() {
     (async () => {
       const res = await request(
         `/user/search?q=${encodeURIComponent(search)}`,
-        { signal: controller.signal }
+        { signal: controller.signal },
       );
       if (res.ok) {
         const json = await res.json();
@@ -45,10 +46,14 @@ export default function Search() {
         renderItem={({ item, index }) => (
           <>
             {/* @ts-ignore */}
-            <UserCard {...item} />
+            <UserCard
+              {...item}
+              onPress={() => navigation.navigate("Chats", { screen: "Chat" })}
+            />
             {index !== users.length - 1 && <Divider />}
           </>
         )}
+        // keyExtractor={(item) => item.id}
       />
     </View>
   );

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { ParamListBase } from "@react-navigation/native";
+import type { ImagePickerAsset } from "expo-image-picker";
 import {
   createContext,
   useCallback,
@@ -11,14 +12,16 @@ import {
   useTransition,
 } from "react";
 import { useNavigation } from "@react-navigation/native";
-import setCookieParser from "set-cookie-parser";
 import * as SecureStore from "expo-secure-store";
+import * as SplashScreen from "expo-splash-screen";
+import setCookieParser from "set-cookie-parser";
 import { object2formData, request } from "../util";
 import { Alert } from "react-native";
 
 type User = {
   id: number;
   username: string;
+  image: string;
   email: string;
   phone: string;
   password: string;
@@ -30,11 +33,13 @@ type AuthValue = {
   signUp: (body: FormData) => Promise<void>;
   signIn: (body: FormData) => Promise<void>;
   signOut: () => Promise<void>;
-  update: () => Promise<void>;
+  update: (image: ImagePickerAsset | null) => Promise<void>;
   remove: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthValue | null>(null);
+
+SplashScreen.preventAutoHideAsync();
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
@@ -76,7 +81,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
       const json = await res.json();
       setUser(json.data.user);
-    })();
+    })().then(() => SplashScreen.hideAsync());
   }, [authorization]);
 
   const signUp = useCallback(
@@ -89,7 +94,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       const json = await res.json();
 
       if (res.ok) {
-        setUser(json.data.user);
         navigation.navigate("Auth", { screen: "SignIn" });
       } else {
         Alert.alert("Error", json?.data?.message ?? "Can't Sign up");
@@ -129,16 +133,29 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [authorization, navigation]);
 
-  const update = useCallback(async () => {
-    const formData = object2formData(user!);
-    const res = await request("/user", {
-      method: "PUT",
-      body: formData,
-    });
-    const json = await res.json();
-    if (res.ok) setUser(json.data.user);
-    else Alert.alert("Error", json?.data?.message ?? "Can't update");
-  }, [user]);
+  const update = useCallback(
+    async (image: ImagePickerAsset | null) => {
+      const formData = object2formData(user!);
+
+      if (image !== null) {
+        // @ts-ignore
+        formData.append("image", {
+          uri: image.uri,
+          name: "image.png",
+          type: image.mimeType,
+        });
+      }
+
+      const res = await request("/user", {
+        method: "PUT",
+        body: formData,
+      });
+      const json = await res.json();
+      if (res.ok) setUser(json.data.user);
+      else Alert.alert("Error", json?.data?.message ?? "Can't update");
+    },
+    [user],
+  );
 
   const remove = useCallback(async () => {
     const res = await request("/user", { method: "DELETE" });
@@ -152,7 +169,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, [authorization]);
 
   useEffect(() => {
-    const delay = 6000; // 1 minute
+    const delay = 6000 * 5; // 5 minute
 
     const interval = setInterval(async () => {
       const controller = new AbortController();
@@ -162,7 +179,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       }, delay);
 
       const res = await request("/auth/status", { signal: controller.signal });
-      if (!res.ok) Alert.alert("Offline", "Can't reach the server");
+      // if (!res.ok) Alert.alert("Offline", "Can't reach the server");
 
       clearTimeout(timeout);
     }, delay);

@@ -1,7 +1,8 @@
-import { Text, FlatList, View } from "react-native";
+import { FlatList, View } from "react-native";
 import React from "react";
-import { Card, useTheme } from "react-native-paper";
+import { useTheme } from "react-native-paper";
 import { ScreenProps } from "../../../types";
+import { UserCard } from "../../../components";
 
 const chats = [
   {
@@ -18,10 +19,6 @@ const chats = [
   },
 ];
 
-function Chat() {
-  return <Card></Card>;
-}
-
 export default function Chats({ navigation }: ScreenProps) {
   const theme = useTheme();
 
@@ -30,13 +27,12 @@ export default function Chats({ navigation }: ScreenProps) {
       <FlatList
         data={chats}
         renderItem={({ item }) => (
-          <Text
+          <UserCard
+            {...item}
             onPress={() => {
               navigation.navigate("Chat");
             }}
-          >
-            {item.username}
-          </Text>
+          />
         )}
       />
     </View>

@@ -1,12 +1,13 @@
+import type { ScreenProps } from "../../types";
 import { useState, useTransition } from "react";
 import { View } from "react-native";
-import { IconButton, Searchbar, useTheme } from "react-native-paper";
+import { Appbar, IconButton, Searchbar, useTheme } from "react-native-paper";
 import { MaterialIcons } from "@expo/vector-icons";
 
-export default function Chat() {
+export default function Chat({ navigation }: ScreenProps) {
+  const theme = useTheme();
   const [_isPending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
-  const theme = useTheme();
 
   return (
     <View
@@ -16,6 +17,10 @@ export default function Chat() {
         backgroundColor: theme.colors.background,
       }}
     >
+      <Appbar.Header>
+        <Appbar.BackAction onPress={() => navigation.goBack()} />
+        <Appbar.Content title="test" />
+      </Appbar.Header>
       <View
         style={{
           width: "100%",

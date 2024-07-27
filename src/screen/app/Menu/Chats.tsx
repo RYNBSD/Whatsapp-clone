@@ -1,6 +1,4 @@
-import { Text, ScrollView, FlatList } from "react-native";
-import React from "react";
-import { Card } from "react-native-paper";
+import { Text, FlatList } from "react-native";
 
 const chats = [
   {
@@ -16,10 +14,6 @@ const chats = [
     lastMessage: "last message",
   },
 ];
-
-function Chat() {
-  return <Card></Card>;
-}
 
 export default function Chats() {
   return (

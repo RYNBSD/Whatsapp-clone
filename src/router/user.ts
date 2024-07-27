@@ -13,6 +13,6 @@ user.get("/search", handleAsync(search));
 
 user.get("/", handleAsync(profile));
 
-user.put("/", handleAsync(upload.none()), handleAsync(update));
+user.put("/", handleAsync(upload.single("image")), handleAsync(update));
 
 user.delete("/", handleAsync(remove));

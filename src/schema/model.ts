@@ -7,6 +7,7 @@ const UserId = z.object({ userId: z.number() });
 export const User = z
   .object({
     username: z.string(),
+    image: z.string(),
     email: z.string().email(),
     phone: z.string(),
     password: z.string(),

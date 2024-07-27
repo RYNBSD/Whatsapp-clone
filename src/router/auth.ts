@@ -42,7 +42,7 @@ const { signUp, signIn, signOut, me, forgotPassword, resetPassword, status } = c
  *      5xx:
  *        description: Server error
  */
-auth.post("/sign-up", handleAsync(isUnauthenticated), handleAsync(upload.none()), handleAsync(signUp));
+auth.post("/sign-up", handleAsync(isUnauthenticated), handleAsync(upload.single("image")), handleAsync(signUp));
 
 /**
  * @openapi
@@ -137,4 +137,4 @@ auth.put("/reset-password", handleAsync(upload.none()), handleAsync(resetPasswor
  *      5xx:
  *        description: Server error
  */
-auth.get("/status", handleAsync(status));
+auth.get("/status", handleAsync(isAuthenticated), handleAsync(status));

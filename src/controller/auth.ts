@@ -9,11 +9,19 @@ import { APIError } from "../error/index.js";
 import { config } from "../config/index.js";
 import { authenticate } from "../passport/fn.js";
 import { ENUM } from "../constant/index.js";
+import FileUploader from "../lib/upload.js";
 
 const { SignUp, SignIn } = schema.req.auth;
 
 export default {
   async signUp(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
+    const image = req.file;
+    if (typeof image === "undefined" || image.buffer.length === 0)
+      throw APIError.controller(StatusCodes.BAD_REQUEST, "Profile image is required");
+
+    const uploaded = await new FileUploader(image.buffer).upload();
+    if (uploaded.length === 0) throw APIError.controller(StatusCodes.BAD_REQUEST, "Invalid image");
+
     const { Body } = SignUp;
     const { username, email, phone, password } = Body.parse(req.body);
 
@@ -28,9 +36,10 @@ export default {
     });
     if (checkEmail !== null) throw APIError.controller(StatusCodes.CONFLICT, "Email already exists");
 
+    const parsedPhone = phone.replaceAll(/\s/g, "");
     const checkPhone = await User.findOne({
       attributes: ["phone"],
-      where: { phone },
+      where: { phone: parsedPhone },
       limit: 1,
       plain: true,
       transaction: res.locals.transaction,
@@ -39,8 +48,8 @@ export default {
 
     const { bcrypt } = util;
     const user = await User.create(
-      { username, email, phone: phone.replaceAll(/\s/g, ""), password: bcrypt.hash(password) },
-      { fields: ["username", "email", "phone", "password"], transaction: res.locals.transaction },
+      { username, image: uploaded[0]!, email, phone: parsedPhone, password: bcrypt.hash(password) },
+      { fields: ["username", "image", "email", "phone", "password"], transaction: res.locals.transaction },
     );
 
     res.status(StatusCodes.CREATED).json({
@@ -120,8 +129,7 @@ export default {
   },
   async forgotPassword(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {},
   async resetPassword(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {},
-  async status(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
-    const isAuthenticated = req.isAuthenticated();
-    res.sendStatus(isAuthenticated ? StatusCodes.OK : StatusCodes.UNAUTHORIZED);
+  async status(_req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
+    res.status(StatusCodes.OK).json({ success: true });
   },
 } as const;

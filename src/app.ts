@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import type { ResponseFailed, ResponseLocals } from "./types/index.js";
+import path from "node:path";
 import express from "express";
 import timeout from "connect-timeout";
 import responseTime from "response-time";
@@ -10,6 +11,7 @@ import morgan from "morgan";
 import hpp from "hpp";
 import cookieParser from "cookie-parser";
 import requestIp from "request-ip";
+import useragent from "express-useragent";
 import helmet from "helmet";
 import { StatusCodes } from "http-status-codes";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -20,6 +22,7 @@ import passport from "./passport/index.js";
 import { ENV, KEYS } from "./constant/index.js";
 import { BaseError } from "./error/index.js";
 import { router } from "./router/index.js";
+import { FileUploader } from "./lib/index.js";
 
 const app = express();
 app.set("env", ENV.NODE.ENV);
@@ -51,11 +54,15 @@ app.use(config.app.session);
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(requestIp.mw());
+app.use(useragent.express());
+
 
 app.use("/", router);
 
 const docs = config.swagger.init();
 app.use("/docs", docs.serve, docs.ui);
+
+app.use(express.static(path.join(__root, FileUploader.PUBLIC), { etag: true }));
 
 app.all("*", async (_req, res: Response<ResponseFailed, ResponseLocals>) =>
   res.status(StatusCodes.NOT_FOUND).json({ success: false }),

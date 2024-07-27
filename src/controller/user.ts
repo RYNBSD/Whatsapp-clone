@@ -5,6 +5,8 @@ import Fuse from "fuse.js";
 import { StatusCodes } from "http-status-codes";
 import { schema } from "../schema/index.js";
 import { model } from "../model/index.js";
+import FileUploader from "../lib/upload.js";
+import { APIError } from "../error/index.js";
 
 const { Search, Update } = schema.req.user;
 
@@ -58,9 +60,22 @@ export default {
     });
   },
   async update(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
+    let newImage = req.user!.dataValues.image;
+
+    const image = req.file;
+    if (typeof image !== "undefined" && image.buffer.length > 0) {
+      const uploaded = await new FileUploader(image.buffer).upload();
+      if (uploaded.length === 0) throw APIError.controller(StatusCodes.BAD_REQUEST, "Invalid image");
+      await FileUploader.remove(req.user!.dataValues.image);
+      newImage = uploaded[0]!;
+    }
+
     const { Body } = Update;
     const { username } = Body.parse(req.body);
-    req.user = await req.user!.update({ username }, { fields: ["username"] });
+    req.user = await req.user!.update(
+      { username, image: newImage },
+      { fields: ["username", "image"], transaction: res.locals.transaction },
+    );
     res.status(StatusCodes.OK).json({ success: true, data: { user: req.user!.dataValues } });
   },
   async remove(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {

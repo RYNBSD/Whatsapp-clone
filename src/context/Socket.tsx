@@ -1,3 +1,5 @@
+// eslint-disable-next-line import/no-unresolved
+import { BASE_URL } from "@env";
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { io, type Socket } from "socket.io-client";
@@ -19,7 +21,7 @@ export default function SocketProvider({ children }: { children: ReactNode }) {
       if (!socket.disconnected) socket.disconnect();
       return setSocket(null);
     }
-    if (socket === null) setSocket(io("http://localhost:8000"));
+    if (socket === null) setSocket(io(BASE_URL, { withCredentials: true }));
     return () => {
       socket?.disconnect();
     };

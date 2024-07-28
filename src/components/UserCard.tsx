@@ -1,3 +1,5 @@
+// eslint-disable-next-line import/no-unresolved
+import { BASE_URL } from "@env";
 import { Image } from "expo-image";
 import type { ComponentProps, FC } from "react";
 import { memo } from "react";
@@ -16,7 +18,7 @@ const UserCard: FC<Props> = ({ id, username, image, ...props }) => {
         left={({ size }) => (
           <Image
             style={{ width: size, height: size, borderRadius: size / 2 }}
-            source={`http://192.168.1.48:8000/${image}`}
+            source={`${BASE_URL}/${image}`}
             contentFit="cover"
           />
         )}

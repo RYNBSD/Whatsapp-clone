@@ -1,3 +1,5 @@
+// eslint-disable-next-line import/no-unresolved
+import { BASE_URL } from "@env";
 import { View } from "react-native";
 import {
   Button,
@@ -43,9 +45,7 @@ export default function Profile() {
             >
               <Image
                 source={
-                  image !== null
-                    ? image.uri
-                    : `http://192.168.1.48:8000/${user!.image}`
+                  image !== null ? image.uri : `${BASE_URL}/${user!.image}`
                 }
                 style={{ width: 150, height: 150, borderRadius: 75 }}
                 contentFit="cover"

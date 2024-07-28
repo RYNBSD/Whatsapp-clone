@@ -48,7 +48,12 @@ export default function Search({ navigation }: ScreenProps) {
             {/* @ts-ignore */}
             <UserCard
               {...item}
-              onPress={() => navigation.navigate("Chats", { screen: "Chat" })}
+              onPress={() =>
+                navigation.navigate("App", {
+                  screen: "Chat",
+                  params: { user: item },
+                })
+              }
             />
             {index !== users.length - 1 && <Divider />}
           </>

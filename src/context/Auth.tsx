@@ -14,7 +14,6 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
-import setCookieParser from "set-cookie-parser";
 import { object2formData, request } from "../util";
 import { Alert } from "react-native";
 
@@ -53,35 +52,20 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const getJWT = useCallback(
-    (headers: Headers) => {
-      const cookies = setCookieParser(headers.get("set-cookie") ?? "");
-      if (cookies.length === 0) return;
-
-      const token = cookies.find((cookie) => cookie.name === authorization);
-      if (typeof token === "undefined" || token.value.length === 0) return;
-
-      SecureStore.setItem(authorization, token.value);
-    },
-    [authorization],
-  );
-
   useEffect(() => {
     const token = SecureStore.getItem(authorization) ?? "";
-    if (token.length === 0) return;
+    if (token.length === 0) {
+      SplashScreen.hideAsync();
+      return;
+    }
 
     (async () => {
-      const res = await request("/auth/me", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await request("/auth/me", { method: "POST" });
       if (!res.ok) return;
 
       const json = await res.json();
       setUser(json.data.user);
-    })().then(() => SplashScreen.hideAsync());
+    })().finally(() => SplashScreen.hideAsync());
   }, [authorization]);
 
   const signUp = useCallback(
@@ -90,7 +74,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
         body,
       });
-      getJWT(res.headers);
       const json = await res.json();
 
       if (res.ok) {
@@ -99,7 +82,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         Alert.alert("Error", json?.data?.message ?? "Can't Sign up");
       }
     },
-    [getJWT, navigation],
+    [navigation],
   );
 
   const signIn = useCallback(
@@ -108,7 +91,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
         body,
       });
-      getJWT(res.headers);
       const json = await res.json();
 
       if (res.ok) {
@@ -118,7 +100,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         Alert.alert("Error", json?.data?.message ?? "Can't Sign up");
       }
     },
-    [getJWT, navigation],
+    [navigation],
   );
 
   const signOut = useCallback(async () => {
@@ -169,7 +151,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, [authorization]);
 
   useEffect(() => {
-    const delay = 6000 * 5; // 5 minute
+    const delay = 6000 * 10; // 10 minute
 
     const interval = setInterval(async () => {
       const controller = new AbortController();

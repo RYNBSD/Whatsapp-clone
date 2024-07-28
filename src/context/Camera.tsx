@@ -18,6 +18,7 @@ import {
   useState,
 } from "react";
 import { Alert, Platform, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconButton, SegmentedButtons } from "react-native-paper";
 import { useAudio } from "./Audio";
 import { useMediaLibrary } from "./MediaLibrary";
@@ -37,6 +38,7 @@ type CameraValue = {
 const CameraContext = createContext<CameraValue | null>(null);
 
 export default function CameraProvider({ children }: { children: ReactNode }) {
+  const safeAreaInsets = useSafeAreaInsets();
   const navigation = useNavigation();
   const cameraRef = useRef<ElementRef<typeof CameraView>>(null);
 
@@ -105,7 +107,15 @@ export default function CameraProvider({ children }: { children: ReactNode }) {
       }}
     >
       {isOpen ? (
-        <View style={{ flex: 1 }}>
+        <View
+          style={{
+            flex: 1,
+            paddingTop: safeAreaInsets.top,
+            paddingLeft: safeAreaInsets.left,
+            paddingRight: safeAreaInsets.right,
+            paddingBottom: safeAreaInsets.bottom,
+          }}
+        >
           <CameraView
             ref={cameraRef}
             style={{ flex: 1 }}

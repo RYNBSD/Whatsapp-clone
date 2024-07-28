@@ -1,12 +1,18 @@
 import { createMaterialBottomTabNavigator } from "react-native-paper/react-navigation";
+import { useState } from "react";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
-import { Appbar } from "react-native-paper";
-import { useCamera } from "../../../context";
+import { Appbar, Menu } from "react-native-paper";
+import { useAuth, useCamera } from "../../../context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { request } from "../../../util";
 
 const BottomTap = createMaterialBottomTabNavigator();
 
 export default function App() {
+  const safeAreaInsets = useSafeAreaInsets();
+  const [visible, setVisible] = useState(false);
   const { open, checkPermission: checkCameraPermission } = useCamera()!;
+  const { signOut } = useAuth()!;
   // const { checkPermission: checkAudioPermission } = useAudio()!;
   // const { checkPermission: checkMediaLibraryPermission } = useMediaLibrary()!;
 
@@ -30,11 +36,25 @@ export default function App() {
             />
           )}
         />
-        <Appbar.Action
-          icon={(props) => (
-            <MaterialCommunityIcons {...props} name="dots-vertical" size={24} />
-          )}
-        />
+        <Menu
+          style={{ paddingTop: safeAreaInsets.top }}
+          visible={visible}
+          onDismiss={() => setVisible(false)}
+          anchor={
+            <Appbar.Action
+              icon={(props) => (
+                <MaterialCommunityIcons
+                  {...props}
+                  name="dots-vertical"
+                  size={24}
+                  onPress={() => setVisible(true)}
+                />
+              )}
+            />
+          }
+        >
+          <Menu.Item title="Sign out" onPress={signOut} />
+        </Menu>
       </Appbar.Header>
       <BottomTap.Navigator>
         <BottomTap.Screen

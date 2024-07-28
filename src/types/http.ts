@@ -1,11 +1,9 @@
 import type { Transaction } from "sequelize";
-import { Tables } from "./model.js";
 
 export type ResponseBody = Record<any, any> | Record<any, any>[];
 
 export type ResponseLocals = {
   transaction: Transaction;
-  user?: Tables["User"];
 };
 
 export type ResponseSuccess = {

@@ -4,6 +4,6 @@ export const cookie = {
   sameSite: global.isProduction,
   httpOnly: global.isProduction,
   secure: global.isProduction,
-  maxAge: 1000 * 60 * 60 * 24 * 30, // 1 month
+  maxAge: 6000 * 15, // 15 minutes
   path: "/",
 } satisfies CookieOptions;

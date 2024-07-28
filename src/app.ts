@@ -14,6 +14,8 @@ import requestIp from "request-ip";
 import useragent from "express-useragent";
 import helmet from "helmet";
 import { StatusCodes } from "http-status-codes";
+import { MulterError } from "multer";
+import { ZodError } from "zod";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import cookieEncrypt from "cookie-encrypter";
@@ -56,7 +58,6 @@ app.use(passport.session());
 app.use(requestIp.mw());
 app.use(useragent.express());
 
-
 app.use("/", router);
 
 const docs = config.swagger.init();
@@ -68,11 +69,26 @@ app.all("*", async (_req, res: Response<ResponseFailed, ResponseLocals>) =>
   res.status(StatusCodes.NOT_FOUND).json({ success: false }),
 );
 
-app.use(async (error: unknown, _req: Request, res: Response<ResponseFailed>) => {
-  await BaseError.handleError(error);
-  res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+app.use(async (error: Error, _req: Request, res: Response<ResponseFailed>) => {
+  let status = StatusCodes.BAD_REQUEST;
+  let message = "";
+
+  if ((error instanceof BaseError || error.name === BaseError.name) && BaseError.checkOperational(error)) {
+    status = (error as BaseError).statusCode;
+    message = error.message;
+  } else if (error instanceof MulterError || error.name === MulterError.name) {
+    status = StatusCodes.FORBIDDEN;
+    message = error.message;
+  } else if (error instanceof ZodError || error.name === ZodError.name) {
+    message = (error as ZodError).flatten().formErrors.join("\n");
+  } else {
+    status = StatusCodes.INTERNAL_SERVER_ERROR;
+    message = "Server error";
+    await BaseError.handleError(error);
+  }
+  res.status(status).json({
     success: false,
-    message: "Server error",
+    message,
   });
 });
 

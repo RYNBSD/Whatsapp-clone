@@ -8,6 +8,7 @@ export async function onConnection(socket: Socket) {
   const userId = req.user!.dataValues.id;
 
   console.log(`User connected ${userId},  Socket id ${socket.id}`);
+  socket.join(req.session.id);
 
   await global.mongo
     .db()

@@ -52,21 +52,17 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const me = useCallback(async () => {
+    const res = await request("/auth/me", { method: "POST" });
+    if (!res.ok) return;
+
+    const json = await res.json();
+    setUser(json.data.user);
+  }, []);
+
   useEffect(() => {
-    const token = SecureStore.getItem(authorization) ?? "";
-    if (token.length === 0) {
-      SplashScreen.hideAsync();
-      return;
-    }
-
-    (async () => {
-      const res = await request("/auth/me", { method: "POST" });
-      if (!res.ok) return;
-
-      const json = await res.json();
-      setUser(json.data.user);
-    })().finally(() => SplashScreen.hideAsync());
-  }, [authorization]);
+    me().finally(() => SplashScreen.hideAsync());
+  }, [me]);
 
   const signUp = useCallback(
     async (body: FormData) => {
@@ -161,15 +157,16 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       }, delay);
 
       const res = await request("/auth/status", { signal: controller.signal });
-      // if (!res.ok) Alert.alert("Offline", "Can't reach the server");
-
       clearTimeout(timeout);
+
+      if (res.ok) return;
+      await me();
     }, delay);
 
     return () => {
       clearInterval(interval);
     };
-  }, [signOut, user]);
+  }, [me, signOut, user]);
 
   return (
     <AuthContext.Provider

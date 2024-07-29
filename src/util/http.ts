@@ -16,7 +16,10 @@ export async function request(path: string, init?: RequestInit) {
     credentials: "include",
   });
 
-  const cookies = setCookieParser(response.headers.get("set-cookie") ?? "");
+  const setCookie = response.headers.get("set-cookie") ?? "";
+  if (setCookie.length === 0) return response;
+
+  const cookies = setCookieParser(setCookie);
   if (cookies.length === 0) return response;
 
   const newToken = cookies.find((cookie) => cookie.name === authorization);

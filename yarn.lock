@@ -3695,6 +3695,11 @@ expo-modules-core@1.12.19:
   dependencies:
     invariant "^2.2.4"
 
+expo-screen-capture@~6.0.1:
+  version "6.0.1"
+  resolved "https://registry.yarnpkg.com/expo-screen-capture/-/expo-screen-capture-6.0.1.tgz#b1e7c2b095cab8650f7a6e99ffc4e5d522550165"
+  integrity sha512-rJnwcKxZ6anfEx2xFeRo9MAVp2JgI4S+TuhUurHRf9rildPVorS2JvLey3i5xZPs7CxEe2xcijTmr5WT5Lw4dA==
+
 expo-secure-store@~13.0.2:
   version "13.0.2"
   resolved "https://registry.yarnpkg.com/expo-secure-store/-/expo-secure-store-13.0.2.tgz#ba8f6076fc38062a28bb2ce5edab9cd28ef88598"

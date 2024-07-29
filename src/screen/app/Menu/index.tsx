@@ -4,7 +4,6 @@ import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { Appbar, Menu } from "react-native-paper";
 import { useAuth, useCamera } from "../../../context";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { request } from "../../../util";
 
 const BottomTap = createMaterialBottomTabNavigator();
 

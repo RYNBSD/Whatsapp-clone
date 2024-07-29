@@ -16,8 +16,23 @@ export const User = z
 
 export const UserHistory = z
   .object({
-    ip: z.string().nullish(),
+    ip: z.string().optional(),
     type: z.enum(ENUM.USER_HISTORY),
   })
   .merge(Id)
+  .merge(UserId);
+
+export const Message = z
+  .object({
+    sender: z.number(),
+    receiver: z.number(),
+    message: z.string(),
+    type: z.enum(ENUM.MESSAGE_TYPE),
+  })
+  .merge(Id);
+
+export const Socket = z
+  .object({
+    socketId: z.string(),
+  })
   .merge(UserId);

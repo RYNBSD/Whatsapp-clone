@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
 import type { Socket } from "socket.io";
 import type { ResponseFailed, ResponseLocals } from "../types/index.js";
+import { BaseError } from "../error/index.js";
 
 type HandleAsyncFn = ((req: Request, res: Response<any, any>, next: NextFunction) => Promise<void>) | RequestHandler;
 
@@ -41,17 +42,16 @@ export function handleSocket(fn: HandleSocketFn) {
   return async (socket: Socket, ...args: any[]) => {
     try {
       const transaction = await global.sequelize.transaction();
-      const session = global.mongo.startSession();
-
-      session.startTransaction();
-      socket.locals = { transaction, session };
+      socket.locals = { transaction };
 
       await fn(socket, ...args)
-        .then(() => Promise.all([transaction.commit(), session.commitTransaction()]))
-        .catch(() => Promise.all([transaction.rollback(), session.abortTransaction()]))
-        .finally(() => session.endSession());
+        .then(() => transaction.commit())
+        .catch((error) => {
+          console.log(error);
+          transaction.rollback();
+        });
     } catch (error) {
-      /* empty */
+      console.error(error);
     }
   };
 }

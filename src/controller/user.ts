@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import type { ResponseLocals, ResponseSuccess } from "../types/index.js";
-import { Op } from "sequelize";
+import { Op, QueryTypes } from "sequelize";
 import Fuse from "fuse.js";
 import { StatusCodes } from "http-status-codes";
 import { schema } from "../schema/index.js";
@@ -8,7 +8,7 @@ import { model } from "../model/index.js";
 import FileUploader from "../lib/upload.js";
 import { APIError } from "../error/index.js";
 
-const { Search, Update } = schema.req.user;
+const { Search, Messages, IsContact, Update } = schema.req.user;
 
 export default {
   async search(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
@@ -17,7 +17,10 @@ export default {
 
     const { User } = model;
     const users = await User.findAll({
-      where: { username: { [Op.or]: q.split(/\s/g).map((key) => ({ [Op.like]: `%${key}%` })) } },
+      where: {
+        username: { [Op.or]: q.split(/\s/g).map((key) => ({ [Op.iLike]: `%${key}%` })) },
+        id: { [Op.ne]: req.user!.dataValues.id },
+      },
       limit: 25,
       transaction: res.locals.transaction,
     });
@@ -58,6 +61,61 @@ export default {
         user: req.user!.dataValues,
       },
     });
+  },
+  async chats(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
+    const chats = await sequelize.query(
+      `
+      SELECT "U".* FROM "Message" "M"
+      LEFT JOIN "User" "U" ON "U"."id" = "M"."receiver"
+      WHERE "M"."sender" = $userId
+      GROUP BY "U"."id", "M"."createdAt"
+      ORDER BY "M"."createdAt" DESC
+`,
+      {
+        type: QueryTypes.SELECT,
+        raw: true,
+        bind: { userId: req.user!.dataValues.id },
+        transaction: res.locals.transaction,
+      },
+    );
+    res.status(chats.length === 0 ? StatusCodes.NO_CONTENT : StatusCodes.OK).json({ success: true, data: { chats } });
+  },
+  async messages(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
+    const { Query } = Messages;
+    const { receiverId, lastId } = Query.parse(req.query);
+
+    const { Message } = model;
+    const messages = await Message.findAll({
+      where: {
+        sender: req.user!.dataValues.id,
+        receiver: receiverId,
+        id: { [Op.lt]: lastId ?? (await Message.count({ col: "id" })) },
+      },
+      order: [["createdAt", "DESC"]],
+      limit: 25,
+      transaction: res.locals.transaction,
+    });
+
+    res.status(messages.length === 0 ? StatusCodes.NO_CONTENT : StatusCodes.OK).json({
+      success: true,
+      data: {
+        messages: messages.map((message) => message.dataValues),
+      },
+    });
+  },
+  async isContact(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
+    const { Query } = IsContact;
+    const { contactId } = Query.parse(req.query);
+
+    const { Message } = model;
+    const check = await Message.findOne({
+      where: { receiver: contactId, sender: req.user!.dataValues.id },
+      limit: 1,
+      plain: true,
+    });
+    if (check === null) throw APIError.controller(StatusCodes.NOT_FOUND, "Contact not found");
+
+    res.status(StatusCodes.OK).json({ success: true });
   },
   async update(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
     let newImage = req.user!.dataValues.image;

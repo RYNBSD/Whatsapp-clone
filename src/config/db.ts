@@ -9,7 +9,7 @@ export async function connect() {
       freezeTableName: true,
     },
     logging(sql, timing) {
-      if (global.isProduction) return false;
+      if (global.isProduction) return;
       console.log(`${sql}`.black.bgWhite);
       console.log(`${timing} ms`.bgYellow.black);
     },

@@ -7,7 +7,9 @@ export default {
     ENV: process.env.NODE_ENV,
   },
   URI: {
-    POSTGRES: global.isProduction ? process.env.POSTGRESQL_URI : "postgres://postgres:password@localhost:5432/whatsapp",
+    POSTGRES: global.isProduction
+      ? process.env.POSTGRESQL_URI
+      : "postgres://postgres:password@localhost:5432/whatsapp?replicaSet=rs0",
     MONGO: global.isProduction ? process.env.MONGODB_URI : "mongodb://localhost:27017/whatsapp",
   },
   COOKIE: {

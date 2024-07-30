@@ -8,7 +8,7 @@ import { request } from "../util";
 
 type SocketValue = {
   socket: Socket | null;
-  connectedContacts: number[]
+  connectedContacts: number[];
 };
 
 const SocketContext = createContext<SocketValue | null>(null);

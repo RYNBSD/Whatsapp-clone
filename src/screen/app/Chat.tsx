@@ -1,8 +1,8 @@
 // eslint-disable-next-line import/no-unresolved
 import { BASE_URL } from "@env";
-import type { ScreenProps } from "../../types";
+import type { Message as TMessage, ScreenProps } from "../../types";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { View } from "react-native";
+import { Alert, FlatList, View } from "react-native";
 import {
   Appbar,
   Badge,
@@ -14,9 +14,12 @@ import {
 import { usePreventScreenCapture } from "expo-screen-capture";
 import { getDocumentAsync } from "expo-document-picker";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useAuth, useSocket } from "../../context";
 import { Image } from "expo-image";
+import { Buffer } from "buffer";
+import useEffectOnce from "react-use/lib/useEffectOnce";
+import { useAudio, useSocket } from "../../context";
 import { request } from "../../util";
+import { Message } from "../../components";
 
 export default function Chat({ navigation, route }: ScreenProps) {
   usePreventScreenCapture();
@@ -24,9 +27,10 @@ export default function Chat({ navigation, route }: ScreenProps) {
   const [_isPending, startTransition] = useTransition();
   const [isConnected, setIsConnected] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<TMessage[]>([]);
   const [message, setMessage] = useState("");
   const { socket } = useSocket()!;
+  const { recordingStatus, startRecording, stopRecording } = useAudio()!;
 
   const trimmedMessage = useMemo(() => {
     const trim = message.trim();
@@ -34,14 +38,14 @@ export default function Chat({ navigation, route }: ScreenProps) {
     return trim;
   }, [message, route.params, socket]);
 
-  useEffect(() => {
+  useEffectOnce(() => {
     const controller = new AbortController();
 
     (async () => {
       const res = await request(
         `/user/messages?receiverId=${encodeURIComponent(route.params!.user.id)}${
           messages.length > 0
-            ? `&lastId=${encodeURIComponent(messages[messages.length - 1])}`
+            ? `&lastId=${encodeURIComponent(messages[messages.length - 1].id)}`
             : ""
         }`,
         {
@@ -57,7 +61,19 @@ export default function Chat({ navigation, route }: ScreenProps) {
     return () => {
       controller.abort();
     };
-  }, [messages, route.params]);
+  });
+
+  useEffect(() => {
+    const callback = (arg: TMessage) => {
+      setMessages((prev) => [...prev, arg]);
+    };
+
+    socket!.on("message", callback);
+
+    return () => {
+      socket!.off("message", callback);
+    };
+  }, [socket]);
 
   useEffect(() => {
     const callback = (args: { from: number; length: number }) => {
@@ -67,7 +83,7 @@ export default function Chat({ navigation, route }: ScreenProps) {
     socket!.on("typing", callback);
 
     return () => {
-      socket!.removeListener("typing", callback);
+      socket!.off("typing", callback);
     };
   }, [route.params, socket]);
 
@@ -75,7 +91,6 @@ export default function Chat({ navigation, route }: ScreenProps) {
     <View
       style={{
         flex: 1,
-        position: "relative",
         backgroundColor: theme.colors.background,
       }}
     >
@@ -115,47 +130,77 @@ export default function Chat({ navigation, route }: ScreenProps) {
           }
         />
       </Appbar.Header>
+      <FlatList
+        style={{ flex: 1 }}
+        data={messages}
+        renderItem={({ item }) => <Message {...item} />}
+        keyExtractor={(item) => `${item.id}`}
+      />
       <View
         style={{
           width: "100%",
-          position: "absolute",
-          bottom: 0,
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
           marginBottom: 10,
         }}
       >
-        <Searchbar
-          style={{ flex: 1 }}
-          value={message}
-          onChangeText={(text) => {
-            startTransition(() => {
-              setMessage(text);
-            });
-          }}
-          icon={() => null}
-          right={(props) => (
-            <IconButton
-              {...props}
-              icon={(props) => (
-                <MaterialIcons
-                  {...props}
-                  name="attach-file"
-                  onPress={async () => {
-                    const document = await getDocumentAsync({ multiple: true });
-                    if (document.canceled) return;
-                  }}
-                />
-              )}
-            />
-          )}
-        />
+        {recordingStatus !== null && recordingStatus.isRecording ? (
+          <View
+            style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+          >
+            <Text>{recordingStatus.durationMillis / 1000} seconds</Text>
+          </View>
+        ) : (
+          <Searchbar
+            style={{ flex: 1 }}
+            value={message}
+            onChangeText={(text) => {
+              startTransition(() => {
+                setMessage(text);
+              });
+            }}
+            icon={() => null}
+            right={(props) => (
+              <IconButton
+                {...props}
+                icon={(props) => (
+                  <MaterialIcons
+                    {...props}
+                    name="attach-file"
+                    onPress={async () => {
+                      const document = await getDocumentAsync({
+                        multiple: true,
+                      });
+                      if (document.canceled) return;
+                    }}
+                  />
+                )}
+              />
+            )}
+          />
+        )}
         {trimmedMessage.length === 0 ? (
           <IconButton
             mode="contained"
             icon={(props) => (
-              <MaterialIcons {...props} name="mic" onPress={() => {}} />
+              <MaterialIcons
+                {...props}
+                name="mic"
+                onLongPress={startRecording}
+                onPressOut={async () => {
+                  const base64 = await stopRecording();
+                  if (base64 === null)
+                    return Alert.alert("Error", "Can't record your voice");
+
+                  const buffer = Buffer.from(base64, "base64");
+                  socket!.emit("message", {
+                    to: route.params!.user.id,
+                    message: buffer,
+                    type: "audio",
+                  });
+                }}
+              />
             )}
           />
         ) : (
@@ -167,9 +212,11 @@ export default function Chat({ navigation, route }: ScreenProps) {
                 name="send"
                 onPress={() => {
                   socket!.emit("message", {
-                    receiver: route.params!.user.id,
-                    message,
+                    to: route.params!.user.id,
+                    message: Buffer.from(message),
+                    type: "text",
                   });
+                  setMessage("");
                 }}
               />
             )}

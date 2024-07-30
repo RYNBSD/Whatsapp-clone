@@ -87,11 +87,11 @@ export default {
     const { Message } = model;
     const messages = await Message.findAll({
       where: {
-        sender: req.user!.dataValues.id,
-        receiver: receiverId,
+        sender: [req.user!.dataValues.id, receiverId],
+        receiver: [receiverId, req.user!.dataValues.id],
         id: { [Op.lt]: lastId ?? (await Message.count({ col: "id" })) },
       },
-      order: [["createdAt", "DESC"]],
+      // order: [["createdAt", "DESC"]],
       limit: 25,
       transaction: res.locals.transaction,
     });

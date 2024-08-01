@@ -12,7 +12,7 @@ import isEmail from "validator/lib/isEmail";
 import isEmpty from "validator/lib/isEmpty";
 import { ScreenProps } from "../../types";
 import { useAuth } from "../../context";
-import { object2formData } from "../../util";
+import { handleAsync, object2formData } from "../../util";
 
 export default function SignUp({ navigation }: Props) {
   const theme = useTheme();
@@ -77,7 +77,7 @@ export default function SignUp({ navigation }: Props) {
           <Button
             mode="contained"
             style={{ width: "100%", borderRadius: 12 }}
-            onPress={() => signIn(object2formData(fields))}
+            onPress={() => handleAsync(() => signIn(object2formData(fields)))}
           >
             Submit
           </Button>

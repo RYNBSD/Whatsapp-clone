@@ -2,7 +2,7 @@ import type { ScreenProps } from "../../../types";
 import { useEffect, useState, useTransition } from "react";
 import { FlatList, View } from "react-native";
 import { Divider, Searchbar } from "react-native-paper";
-import { request } from "../../../util";
+import { handleAsync, request } from "../../../util";
 import { UserCard } from "../../../components";
 
 export default function Search({ navigation }: ScreenProps) {
@@ -12,9 +12,9 @@ export default function Search({ navigation }: ScreenProps) {
 
   useEffect(() => {
     if (search.length === 0) return;
-
     const controller = new AbortController();
-    (async () => {
+
+    handleAsync(async () => {
       const res = await request(
         `/user/search?q=${encodeURIComponent(search)}`,
         { signal: controller.signal },
@@ -23,7 +23,8 @@ export default function Search({ navigation }: ScreenProps) {
         const json = await res.json();
         setUsers(json.data.users);
       }
-    })();
+    });
+
     return () => {
       controller.abort();
     };

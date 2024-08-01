@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { ParamListBase } from "@react-navigation/native";
 import type { ImagePickerAsset } from "expo-image-picker";
+import type { User } from "../types";
 import {
   createContext,
   useCallback,
@@ -16,15 +17,6 @@ import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
 import { object2formData, request } from "../util";
 import { Alert } from "react-native";
-
-type User = {
-  id: number;
-  username: string;
-  image: string;
-  email: string;
-  phone: string;
-  password: string;
-};
 
 type AuthValue = {
   user: User | null;

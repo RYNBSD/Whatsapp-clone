@@ -7,7 +7,6 @@ export default function App() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Menu" component={require("./Menu/index").default} />
       <Stack.Screen name="Chat" component={require("./Chat").default} />
-      <Stack.Screen name="Call" component={require("./Call").default} />
     </Stack.Navigator>
   );
 }

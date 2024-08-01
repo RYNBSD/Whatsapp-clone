@@ -1,7 +1,13 @@
 // eslint-disable-next-line import/no-unresolved
 import { BASE_URL } from "@env";
 import type { Message as TMessage, ScreenProps } from "../../types";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { Alert, FlatList, View } from "react-native";
 import {
   Appbar,
@@ -15,48 +21,60 @@ import { usePreventScreenCapture } from "expo-screen-capture";
 import { getDocumentAsync } from "expo-document-picker";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { readAsStringAsync } from "expo-file-system";
 import { Buffer } from "buffer";
 import useEffectOnce from "react-use/lib/useEffectOnce";
 import { useAudio, useSocket } from "../../context";
-import { request } from "../../util";
+import { handleAsync, isCloseToBottom, millis2time, request } from "../../util";
 import { Message } from "../../components";
 
 export default function Chat({ navigation, route }: ScreenProps) {
   usePreventScreenCapture();
   const theme = useTheme();
   const [_isPending, startTransition] = useTransition();
-  const [isConnected, setIsConnected] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<TMessage[]>([]);
   const [message, setMessage] = useState("");
-  const { socket } = useSocket()!;
-  const { recordingStatus, startRecording, stopRecording } = useAudio()!;
+  const { socket, connectedContacts } = useSocket()!;
+  const { recordingStatus, startRecording, stopRecording, clearSounds } =
+    useAudio()!;
 
   const trimmedMessage = useMemo(() => {
     const trim = message.trim();
-    socket!.emit("typing", { to: route.params!.user.id, length: trim.length });
+    socket.volatile.emit("typing", {
+      to: route.params!.user.id,
+      length: trim.length,
+    });
     return trim;
   }, [message, route.params, socket]);
 
-  useEffectOnce(() => {
-    const controller = new AbortController();
-
-    (async () => {
+  const getMessages = useCallback(
+    async (init?: RequestInit) => {
       const res = await request(
         `/user/messages?receiverId=${encodeURIComponent(route.params!.user.id)}${
           messages.length > 0
             ? `&lastId=${encodeURIComponent(messages[messages.length - 1].id)}`
             : ""
         }`,
-        {
-          signal: controller.signal,
-        },
+        init,
       );
       if (!res.ok || res.status === 204) return;
 
       const json = await res.json();
-      setMessages((prev) => prev.concat(json.data.messages));
-    })();
+      const jsonMessages = json.data.messages as TMessage[];
+      setMessages((prev) => prev.concat(jsonMessages));
+    },
+    [messages, route.params],
+  );
+
+  useEffectOnce(() => {
+    const controller = new AbortController();
+
+    handleAsync(async () => {
+      await getMessages({
+        signal: controller.signal,
+      });
+    });
 
     return () => {
       controller.abort();
@@ -64,28 +82,22 @@ export default function Chat({ navigation, route }: ScreenProps) {
   });
 
   useEffect(() => {
-    const callback = (arg: TMessage) => {
-      setMessages((prev) => [...prev, arg]);
+    const messageCallback = (arg: TMessage) => {
+      setMessages((prev) => [arg, ...prev]);
     };
+    socket.on("message", messageCallback);
 
-    socket!.on("message", callback);
-
-    return () => {
-      socket!.off("message", callback);
-    };
-  }, [socket]);
-
-  useEffect(() => {
-    const callback = (args: { from: number; length: number }) => {
+    const typingCallback = (args: { from: number; length: number }) => {
       if (args.from === route.params!.user.id) setIsTyping(args.length > 0);
     };
-
-    socket!.on("typing", callback);
+    socket.on("typing", typingCallback);
 
     return () => {
-      socket!.off("typing", callback);
+      handleAsync(() => clearSounds());
+      socket.off("typing", typingCallback);
+      socket.off("message", messageCallback);
     };
-  }, [route.params, socket]);
+  }, [clearSounds, route.params, socket]);
 
   return (
     <View
@@ -117,7 +129,11 @@ export default function Chat({ navigation, route }: ScreenProps) {
                     position: "absolute",
                     top: 0,
                     right: 0,
-                    backgroundColor: isConnected ? "green" : "red",
+                    backgroundColor: connectedContacts.includes(
+                      route.params!.user.id,
+                    )
+                      ? "green"
+                      : "red",
                   }}
                   size={10}
                 />
@@ -129,12 +145,23 @@ export default function Chat({ navigation, route }: ScreenProps) {
             </View>
           }
         />
+        <Appbar.Action
+          icon={(props) => <MaterialIcons {...props} name="call" />}
+          onPress={() => {}}
+        />
       </Appbar.Header>
       <FlatList
         style={{ flex: 1 }}
         data={messages}
-        renderItem={({ item }) => <Message {...item} />}
+        renderItem={({ item, index }) => <Message {...item} />}
         keyExtractor={(item) => `${item.id}`}
+        inverted
+        onScroll={async ({ nativeEvent }) => {
+          if (!isCloseToBottom(nativeEvent)) return;
+          handleAsync(async () => {
+            await getMessages();
+          });
+        }}
       />
       <View
         style={{
@@ -149,7 +176,7 @@ export default function Chat({ navigation, route }: ScreenProps) {
           <View
             style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
           >
-            <Text>{recordingStatus.durationMillis / 1000} seconds</Text>
+            <Text>{millis2time(recordingStatus.durationMillis)}</Text>
           </View>
         ) : (
           <Searchbar
@@ -169,10 +196,42 @@ export default function Chat({ navigation, route }: ScreenProps) {
                     {...props}
                     name="attach-file"
                     onPress={async () => {
-                      const document = await getDocumentAsync({
-                        multiple: true,
+                      await handleAsync(async () => {
+                        const documents = await getDocumentAsync({
+                          multiple: true,
+                        });
+                        if (documents.canceled) return;
+
+                        const files = await Promise.all(
+                          documents.assets.map(async (document) => {
+                            const base64 = await readAsStringAsync(
+                              document.uri,
+                              {
+                                encoding: "base64",
+                              },
+                            );
+                            const buffer = Buffer.from(base64, "base64");
+                            return {
+                              buffer,
+                              type: document.mimeType?.startsWith("image")
+                                ? "image"
+                                : document.mimeType?.startsWith("video")
+                                  ? "video"
+                                  : document.mimeType?.startsWith("audio")
+                                    ? "audio"
+                                    : "file",
+                            };
+                          }),
+                        );
+
+                        files.forEach((file) => {
+                          socket.volatile.emit("message", {
+                            to: route.params!.user.id,
+                            message: file.buffer,
+                            type: file.type,
+                          });
+                        });
                       });
-                      if (document.canceled) return;
                     }}
                   />
                 )}
@@ -187,17 +246,19 @@ export default function Chat({ navigation, route }: ScreenProps) {
               <MaterialIcons
                 {...props}
                 name="mic"
-                onLongPress={startRecording}
+                onLongPress={() => handleAsync(() => startRecording())}
                 onPressOut={async () => {
-                  const base64 = await stopRecording();
-                  if (base64 === null)
-                    return Alert.alert("Error", "Can't record your voice");
+                  await handleAsync(async () => {
+                    const base64 = await stopRecording();
+                    if (base64 === null)
+                      return Alert.alert("Error", "Can't record your voice");
 
-                  const buffer = Buffer.from(base64, "base64");
-                  socket!.emit("message", {
-                    to: route.params!.user.id,
-                    message: buffer,
-                    type: "audio",
+                    const buffer = Buffer.from(base64, "base64");
+                    socket.volatile.emit("message", {
+                      to: route.params!.user.id,
+                      message: buffer,
+                      type: "audio",
+                    });
                   });
                 }}
               />
@@ -210,8 +271,8 @@ export default function Chat({ navigation, route }: ScreenProps) {
               <MaterialIcons
                 {...props}
                 name="send"
-                onPress={() => {
-                  socket!.emit("message", {
+                onPress={async () => {
+                  socket.volatile.emit("message", {
                     to: route.params!.user.id,
                     message: Buffer.from(message),
                     type: "text",

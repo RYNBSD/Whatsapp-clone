@@ -21,7 +21,7 @@ import isEmpty from "validator/lib/isEmpty";
 import isStrongPassword from "validator/lib/isStrongPassword";
 import { ScreenProps } from "../../types";
 import { useAuth } from "../../context";
-import { object2formData } from "../../util";
+import { handleAsync, object2formData } from "../../util";
 
 export default function SignUp({ navigation }: Props) {
   const theme = useTheme();
@@ -66,12 +66,14 @@ export default function SignUp({ navigation }: Props) {
             <TouchableRipple
               rippleColor={theme.colors.background}
               onPress={async () => {
-                const result = await launchImageLibraryAsync({
-                  mediaTypes: MediaTypeOptions.Images,
-                  allowsEditing: true,
-                  quality: 1,
+                await handleAsync(async () => {
+                  const result = await launchImageLibraryAsync({
+                    mediaTypes: MediaTypeOptions.Images,
+                    allowsEditing: true,
+                    quality: 1,
+                  });
+                  if (!result.canceled) setImage(result.assets[0]);
                 });
-                if (!result.canceled) setImage(result.assets[0]);
               }}
             >
               <Image
@@ -150,24 +152,26 @@ export default function SignUp({ navigation }: Props) {
             mode="contained"
             style={{ width: "100%", borderRadius: 12 }}
             onPress={async () => {
-              if (image === null) {
-                Alert.alert("Missing", "Make sure to add image");
-                return;
-              }
+              await handleAsync(async () => {
+                if (image === null) {
+                  Alert.alert("Missing", "Make sure to add image");
+                  return;
+                }
 
-              const formData = object2formData({
-                ...fields,
-                phone: fields.country + fields.phone,
+                const formData = object2formData({
+                  ...fields,
+                  phone: fields.country + fields.phone,
+                });
+
+                // @ts-ignore
+                formData.append("image", {
+                  uri: image.uri,
+                  name: "image.png",
+                  type: image.mimeType,
+                });
+
+                await signUp(formData);
               });
-
-              // @ts-ignore
-              formData.append("image", {
-                uri: image.uri,
-                name: "image.png",
-                type: image.mimeType,
-              });
-
-              await signUp(formData);
             }}
           >
             Submit

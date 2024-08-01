@@ -1,3 +1,6 @@
+//! This context is ignored in final video (https://www.youtube.com/@ryn__bsd)
+//* Feel free to use this code
+
 import { MaterialIcons } from "@expo/vector-icons";
 import type { EventArg, NavigationAction } from "@react-navigation/native";
 import { useNavigation } from "@react-navigation/native";

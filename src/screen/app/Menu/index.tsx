@@ -66,15 +66,6 @@ export default function App() {
           }}
         />
         <BottomTap.Screen
-          name="Calls"
-          component={require("./Calls").default}
-          options={{
-            tabBarIcon(props) {
-              return <MaterialIcons {...props} name="call" size={24} />;
-            },
-          }}
-        />
-        <BottomTap.Screen
           name="Search"
           component={require("./Search").default}
           options={{

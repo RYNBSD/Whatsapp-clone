@@ -10,3 +10,9 @@ export async function uri2blob(uri: string) {
   const res = await fetch(uri);
   return res.blob();
 }
+
+export function millis2time(ms: number) {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = (ms % 60000) / 1000;
+  return `${minutes}:${seconds < 10 ? "0" : ""}${seconds.toFixed()}`;
+}

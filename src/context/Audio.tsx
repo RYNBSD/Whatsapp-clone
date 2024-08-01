@@ -16,10 +16,12 @@ type AudioValue = {
   checkPermission: () => Promise<boolean>;
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<string | null>;
-  sounds: Record<string, Audio.Sound>;
+  sounds: Map<string, Audio.Sound>;
   soundsStatus: Record<string, AVPlaybackStatusSuccess>;
   initSound: (key: string, uri: string) => Promise<void>;
   clearSound: (key: string) => Promise<void>;
+  clearSounds: () => Promise<void>;
+  playSound: (key: string) => Promise<void>;
 };
 
 const AudioContext = createContext<AudioValue | null>(null);
@@ -31,7 +33,7 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
   const [recordingStatus, setRecordingStatus] =
     useState<Audio.RecordingStatus | null>(null);
 
-  const [sounds, setSounds] = useState<Record<string, Audio.Sound>>({});
+  const [sounds] = useState<Map<string, Audio.Sound>>(new Map());
   const [soundsStatus, setSoundsStatus] = useState<
     Record<string, AVPlaybackStatusSuccess>
   >({});
@@ -44,40 +46,92 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
     return requestedPermission.granted;
   }, [permission, requestPermission]);
 
-  const initSound = useCallback(async (key: string, uri: string) => {
-    const { sound, status } = await Audio.Sound.createAsync(
-      { uri: `${BASE_URL}/${uri}` },
-      {},
-      (status) => {
-        startTransition(() => {
-          if (!status.isLoaded) return;
-          setSoundsStatus((prev) => ({ ...prev, [key]: status }));
-        });
-      }
-    );
+  const initSound = useCallback(
+    async (key: string, uri: string) => {
+      if (typeof sounds.get(key) !== "undefined") return;
 
-    setSounds((prev) => ({ ...prev, [key]: sound }));
+      const { sound, status } = await Audio.Sound.createAsync(
+        { uri: `${BASE_URL}/${uri}` },
+        {},
+        (status) => {
+          startTransition(() => {
+            if (!status.isLoaded) return;
+            setSoundsStatus((prev) => ({ ...prev, [key]: status }));
+          });
+        },
+      );
 
-    if (!status.isLoaded) return;
-    setSoundsStatus((prev) => ({ ...prev, [key]: status }));
-  }, []);
+      sounds.set(key, sound);
+      // setSounds((prev) => ({ ...prev, [key]: sound }));
+
+      if (!status.isLoaded) return;
+      setSoundsStatus((prev) => ({ ...prev, [key]: status }));
+    },
+    [sounds],
+  );
 
   const clearSound = useCallback(
     async (key: string) => {
-      if (typeof sounds[key] === "undefined") return;
-      await sounds[key].unloadAsync();
-      setSounds((prev) => {
-        delete prev[key];
-        return { ...prev };
-      });
+      const sound = sounds.get(key);
+      if (typeof sound === "undefined") return;
 
-      if (typeof soundsStatus[key] === "undefined") return;
+      await sound.stopAsync();
+      await sound.unloadAsync();
+
+      sounds.delete(key);
+      // setSounds((prev) => {
+      //   delete prev[key];
+      //   return { ...prev };
+      // });
+
       setSoundsStatus((prev) => {
         delete prev[key];
         return { ...prev };
       });
     },
-    [sounds, soundsStatus]
+    [sounds],
+  );
+
+  const clearSounds = useCallback(async () => {
+    const soundsKey = Array.from(sounds.keys());
+    if (soundsKey.length === 0) return;
+
+    await Promise.all(
+      soundsKey.map(async (key) => {
+        await sounds.get(key)!.stopAsync();
+        await sounds.get(key)!.unloadAsync();
+      }),
+    );
+
+    sounds.clear();
+    // setSounds({});
+    setSoundsStatus({});
+  }, [sounds]);
+
+  const playSound = useCallback(
+    async (key: string) => {
+      const sound = sounds.get(key);
+      if (typeof sound === "undefined") return;
+
+      const soundStatus = soundsStatus[key];
+
+      if (soundStatus.isPlaying) {
+        await sound.pauseAsync();
+        return;
+      }
+
+      await Promise.all(
+        Array.from(sounds.keys()).map((key) => {
+          if (!soundsStatus[key].isPlaying) return;
+          return sounds.get(key)!.pauseAsync();
+        }),
+      );
+
+      if (soundStatus.positionMillis < soundStatus.durationMillis!)
+        await sound.playAsync();
+      else await sound.playFromPositionAsync(0);
+    },
+    [sounds, soundsStatus],
   );
 
   const startRecording = useCallback(async () => {
@@ -95,7 +149,7 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
         startTransition(() => {
           setRecordingStatus(status);
         });
-      }
+      },
     );
     setRecording(recording);
     setRecordingStatus(status);
@@ -138,6 +192,8 @@ export default function AudioProvider({ children }: { children: ReactNode }) {
         soundsStatus,
         initSound,
         clearSound,
+        clearSounds,
+        playSound,
       }}
     >
       {children}

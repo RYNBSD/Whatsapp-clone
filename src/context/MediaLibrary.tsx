@@ -1,14 +1,18 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext } from "react";
+import { PermissionResponse, usePermissions } from "expo-media-library";
 import {
-  createAssetAsync,
-  PermissionResponse,
-  usePermissions,
-} from "expo-media-library";
+  readAsStringAsync,
+  StorageAccessFramework,
+  writeAsStringAsync,
+} from "expo-file-system";
+import { shareAsync } from "expo-sharing";
+import { Platform } from "react-native";
 
 type MediaLibraryValue = {
   permission: PermissionResponse | null;
   checkPermission: () => Promise<boolean>;
+  storeAsset: (uri: string, filename: string, mime: string) => Promise<void>;
 };
 
 const MediaLibraryContext = createContext<MediaLibraryValue | null>(null);
@@ -34,16 +38,31 @@ export default function MediaLibraryProvider({
   // }, [permission, requestPermission]);
 
   const storeAsset = useCallback(
-    async (uri: string) => {
+    async (uri: string, filename: string, mime: string) => {
       const isAllowed = await checkPermission();
       if (!isAllowed) return;
-      return createAssetAsync(uri);
+
+      if (Platform.OS !== "android") return shareAsync(uri);
+
+      const permissions =
+        await StorageAccessFramework.requestDirectoryPermissionsAsync();
+      if (!permissions.granted) return shareAsync(uri);
+
+      const base64 = await readAsStringAsync(uri, { encoding: "base64" });
+      const newUri = await StorageAccessFramework.createFileAsync(
+        permissions.directoryUri,
+        filename,
+        mime,
+      );
+      await writeAsStringAsync(newUri, base64, { encoding: "base64" });
     },
     [checkPermission],
   );
 
   return (
-    <MediaLibraryContext.Provider value={{ permission, checkPermission }}>
+    <MediaLibraryContext.Provider
+      value={{ permission, checkPermission, storeAsset }}
+    >
       {children}
     </MediaLibraryContext.Provider>
   );

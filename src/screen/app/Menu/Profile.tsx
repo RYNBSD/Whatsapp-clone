@@ -18,6 +18,7 @@ import {
 } from "expo-image-picker";
 import { useState } from "react";
 import { useAuth } from "../../../context";
+import { handleAsync } from "../../../util";
 
 export default function Profile() {
   const theme = useTheme();
@@ -35,12 +36,14 @@ export default function Profile() {
             <TouchableRipple
               rippleColor={theme.colors.background}
               onPress={async () => {
-                const result = await launchImageLibraryAsync({
-                  mediaTypes: MediaTypeOptions.Images,
-                  allowsEditing: true,
-                  quality: 1,
+                await handleAsync(async () => {
+                  const result = await launchImageLibraryAsync({
+                    mediaTypes: MediaTypeOptions.Images,
+                    allowsEditing: true,
+                    quality: 1,
+                  });
+                  if (!result.canceled) setImage(result.assets[0]);
                 });
-                if (!result.canceled) setImage(result.assets[0]);
               }}
             >
               <Image
@@ -87,11 +90,13 @@ export default function Profile() {
           </View>
         </Card.Content>
         <Card.Actions>
-          <Button onPress={remove}>Delete</Button>
+          <Button onPress={() => handleAsync(() => remove())}>Delete</Button>
           <Button
             onPress={async () => {
-              await update(image);
-              setImage(null);
+              await handleAsync(async () => {
+                await update(image);
+                setImage(null);
+              });
             }}
           >
             Update

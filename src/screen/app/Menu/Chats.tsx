@@ -1,25 +1,49 @@
-import { Text, FlatList } from "react-native";
+import type { ScreenProps, User } from "../../../types";
+import { useState } from "react";
+import { FlatList } from "react-native";
+import useEffectOnce from "react-use/lib/useEffectOnce";
+import { handleAsync, request } from "../../../util";
+import { UserCard } from "../../../components";
+import { Divider } from "react-native-paper";
 
-const chats = [
-  {
-    image:
-      "https://cdn.pixabay.com/photo/2024/04/21/14/13/pelican-8710717_1280.jpg",
-    username: "username",
-    lastMessage: "last message",
-  },
-  {
-    image:
-      "https://cdn.pixabay.com/photo/2024/04/21/14/13/pelican-8710717_1280.jpg",
-    username: "username",
-    lastMessage: "last message",
-  },
-];
+export default function Chats({ navigation }: Props) {
+  const [chats, setChats] = useState<User[]>([]);
 
-export default function Chats() {
+  useEffectOnce(() => {
+    const controller = new AbortController();
+    handleAsync(async () => {
+      const res = await request("/user/chats", { signal: controller.signal });
+      if (!res.ok) return;
+
+      const json = await res.json();
+      setChats(json.data.chats);
+    });
+    return () => {
+      controller.abort();
+    };
+  });
+
   return (
     <FlatList
       data={chats}
-      renderItem={({ item }) => <Text>{item.username}</Text>}
+      renderItem={({ item, index }) => (
+        <>
+          {/* @ts-ignore */}
+          <UserCard
+            {...item}
+            onPress={() => {
+              navigation.navigate("App", {
+                screen: "Chat",
+                params: { user: item },
+              });
+            }}
+          />
+          {index !== chats.length - 1 && <Divider />}
+        </>
+      )}
+      keyExtractor={(item) => `${item.id}`}
     />
   );
 }
+
+type Props = ScreenProps;

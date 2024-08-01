@@ -32,7 +32,7 @@ process.on("uncaughtException", async (error) => {
 const server = http.createServer(app);
 await cache.connect();
 
-global.io = new SocketServer(server);
+global.io = new SocketServer(server, { maxHttpBufferSize: 1e8 });
 global.io.adapter(createAdapter(global.mongo.db().collection(KEYS.CACHE.COLLECTION.SOCKET)));
 await import("./socket/index.js");
 

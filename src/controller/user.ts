@@ -65,12 +65,16 @@ export default {
   async chats(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
     const chats = await sequelize.query(
       `
-      SELECT "U".* FROM "Message" "M"
-      LEFT JOIN "User" "U" ON "U"."id" = "M"."receiver"
-      WHERE "M"."sender" = $userId
-      GROUP BY "U"."id", "M"."createdAt"
-      ORDER BY "M"."createdAt" DESC
-`,
+        SELECT "U"."id", "U"."username", "U"."image", "U"."email", "U"."phone"
+        FROM (
+          SELECT "U"."id", "U"."username", "U"."image", "U"."email", "U"."phone"
+          FROM "Message" "M"
+          INNER JOIN "User" "U" ON "U"."id" = "M"."receiver"
+          WHERE "M"."sender" = $userId
+          ORDER BY "M"."createdAt" DESC
+        ) "U"
+        GROUP BY "U"."id", "U"."username", "U"."image", "U"."email", "U"."phone"
+      `,
       {
         type: QueryTypes.SELECT,
         raw: true,
@@ -89,9 +93,9 @@ export default {
       where: {
         sender: [req.user!.dataValues.id, receiverId],
         receiver: [receiverId, req.user!.dataValues.id],
-        id: { [Op.lt]: lastId ?? (await Message.count({ col: "id" })) },
+        id: { [lastId ? Op.lt : Op.lte]: lastId ?? (await Message.count({ col: "id" })) },
       },
-      // order: [["createdAt", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit: 25,
       transaction: res.locals.transaction,
     });

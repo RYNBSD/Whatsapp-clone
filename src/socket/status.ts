@@ -18,17 +18,18 @@ export async function onConnection(socket: Socket) {
   );
 
   // Notify all users that new user has connected
-  socket.broadcast.emit("contact-status", { userId, status: true });
+  global.io.emit("contact-status", { userId, status: true });
 
   const contacts = await sequelize.query<{ receiver: number }>(
     `
     SELECT DISTINCT "M"."receiver" FROM "Socket" "S"
     INNER JOIN "Message" "M" ON "M"."receiver" = "S"."userId"
-    WHERE "M"."sender" = 0
+    WHERE "M"."sender" = $userId
   `,
     {
       type: QueryTypes.SELECT,
       raw: true,
+      bind: { userId },
       transaction: socket.locals.transaction,
     },
   );

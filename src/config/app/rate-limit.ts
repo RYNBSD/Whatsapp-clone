@@ -5,7 +5,7 @@ import { rateLimit } from "express-rate-limit";
 import { ENV } from "../../constant/index.js";
 
 export const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 6000,
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,

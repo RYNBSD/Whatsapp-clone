@@ -8,7 +8,6 @@ export async function onMessage(
   socket: Socket,
   args: { to: number; message: Buffer; type: (typeof ENUM.MESSAGE_TYPE)[number] },
 ) {
-  console.log(args);
   const { Socket, Message } = model;
   const receiver = await Socket.findOne({
     where: { userId: args.to },
@@ -54,4 +53,6 @@ export async function onTyping(socket: Socket, args: { to: number; length: numbe
   socket.to(receiver.dataValues.socketId).emit("typing", { from: req.user!.dataValues.id, length: args.length });
 }
 
-export async function onSeen(socket: Socket) {}
+export async function onSeen(socket: Socket) {
+  
+}

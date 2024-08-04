@@ -47,10 +47,12 @@ export default {
       },
     );
 
-    res.status(users.length > 0 ? StatusCodes.OK : StatusCodes.NO_CONTENT).json({
+    const searchedUsers = filteredUsers.search(q);
+
+    res.status(searchedUsers.length > 0 ? StatusCodes.OK : StatusCodes.NO_CONTENT).json({
       success: true,
       data: {
-        users: filteredUsers.search(q).map((user) => user.item),
+        users: searchedUsers.map((user) => user.item),
       },
     });
   },

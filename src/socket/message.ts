@@ -8,6 +8,8 @@ export async function onMessage(
   socket: Socket,
   args: { to: number; message: Buffer; type: (typeof ENUM.MESSAGE_TYPE)[number] },
 ) {
+  const req = socket.request as Request;
+
   const { Socket, Message } = model;
   const receiver = await Socket.findOne({
     where: { userId: args.to },
@@ -15,7 +17,6 @@ export async function onMessage(
     plain: true,
     transaction: socket.locals.transaction,
   });
-  const req = socket.request as Request;
 
   let fileUri = "";
   if (args.type !== "text") {
@@ -30,6 +31,7 @@ export async function onMessage(
       sender: req.user!.dataValues.id,
       receiver: args.to,
       type: ENUM.MESSAGE_TYPE.includes(args.type) ? args.type : "text",
+      seen: false,
     },
     { fields: ["message", "receiver", "sender", "type"], transaction: socket.locals.transaction },
   );
@@ -53,6 +55,26 @@ export async function onTyping(socket: Socket, args: { to: number; length: numbe
   socket.to(receiver.dataValues.socketId).emit("typing", { from: req.user!.dataValues.id, length: args.length });
 }
 
-export async function onSeen(socket: Socket) {
-  
+export async function onSeen(socket: Socket, arg: { messageId: number }) {
+  const { Socket, Message } = model;
+
+  const message = await Message.update(
+    { seen: true },
+    {
+      fields: ["seen"],
+      where: { id: arg.messageId },
+      returning: true,
+      transaction: socket.locals.transaction,
+    },
+  );
+
+  const user = await Socket.findOne({
+    where: { userId: message[1][0]?.dataValues.sender ?? 0 },
+    limit: 1,
+    plain: true,
+    transaction: socket.locals.transaction,
+  });
+
+  if (user === null) return;
+  socket.to(user.dataValues.socketId).emit("seen", { messageId: arg.messageId });
 }

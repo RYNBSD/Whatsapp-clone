@@ -8,8 +8,6 @@ export async function onConnection(socket: Socket) {
   const req = socket.request as Request;
   const userId = req.user!.dataValues.id;
 
-  socket.join(req.session.id);
-
   const { Socket } = model;
   await Socket.destroy({ where: { userId }, force: true, transaction: socket.locals.transaction });
   await Socket.create(

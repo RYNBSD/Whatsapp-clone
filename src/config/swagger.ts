@@ -10,7 +10,7 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: "3.1.0",
     info: {
-      title: "Marketplace API",
+      title: "Whatsapp API",
       version: "1",
       description:
         "This is a swagger documentation for whatsapp, this is not for testing api, if you want to test it use for eg: postman",

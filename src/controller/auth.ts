@@ -92,15 +92,10 @@ export default {
   async signOut(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
     req.logOut((err) => {
       if (err) throw err;
-      req.session.destroy((err) => {
-        if (err) throw err;
-        const { options } = config;
-        io.in(req.sessionID).disconnectSockets();
-        res
-          .status(StatusCodes.OK)
-          .setHeader("Set-Cookie", serialize("authorization", "", options.cookie))
-          .json({ success: true });
-      });
+      res
+        .status(StatusCodes.OK)
+        .clearCookie("connect.sid", { path: "/" })
+        .json({ success: true });
     });
   },
   async me(req: Request, res: Response<ResponseSuccess, ResponseLocals>, next: NextFunction) {

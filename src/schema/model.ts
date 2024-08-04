@@ -28,6 +28,7 @@ export const Message = z
     receiver: z.number(),
     message: z.string(),
     type: z.enum(ENUM.MESSAGE_TYPE),
+    seen: z.boolean(),
   })
   .merge(Id);
 

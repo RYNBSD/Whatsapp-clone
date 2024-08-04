@@ -33,8 +33,13 @@ export const Message = sequelize.define<Tables["Message"]>(
     },
     type: {
       type: DataTypes.ENUM(...ENUM.MESSAGE_TYPE),
-      allowNull: false
-    }
+      allowNull: false,
+    },
+    seen: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   },
   {
     timestamps: true,

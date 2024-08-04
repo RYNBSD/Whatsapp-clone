@@ -15,5 +15,6 @@ export type Message = {
   sender: number;
   receiver: number;
   type: MessageType;
+  seen: boolean;
   createdAt: string;
 };

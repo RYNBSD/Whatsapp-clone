@@ -56,7 +56,7 @@ export default function Chat({ navigation, route }: ScreenProps) {
             ? `&lastId=${encodeURIComponent(messages[messages.length - 1].id)}`
             : ""
         }`,
-        init,
+        init
       );
       if (!res.ok || res.status === 204) return;
 
@@ -64,7 +64,7 @@ export default function Chat({ navigation, route }: ScreenProps) {
       const jsonMessages = json.data.messages as TMessage[];
       setMessages((prev) => prev.concat(jsonMessages));
     },
-    [messages, route.params],
+    [messages, route.params]
   );
 
   useEffectOnce(() => {
@@ -92,10 +92,22 @@ export default function Chat({ navigation, route }: ScreenProps) {
     };
     socket.on("typing", typingCallback);
 
+    const seenCallback = (arg: { messageId: number }) => {
+      console.log(arg);
+      setMessages((prev) => ({
+        ...prev.map((message) => {
+          if (message.id === arg.messageId) message.seen = true;
+          return message;
+        }),
+      }));
+    };
+    socket.on("seen", seenCallback);
+
     return () => {
       handleAsync(() => clearSounds());
       socket.off("typing", typingCallback);
       socket.off("message", messageCallback);
+      socket.off("seen", seenCallback);
     };
   }, [clearSounds, route.params, socket]);
 
@@ -130,7 +142,7 @@ export default function Chat({ navigation, route }: ScreenProps) {
                     top: 0,
                     right: 0,
                     backgroundColor: connectedContacts.includes(
-                      route.params!.user.id,
+                      route.params!.user.id
                     )
                       ? "green"
                       : "red",
@@ -153,7 +165,7 @@ export default function Chat({ navigation, route }: ScreenProps) {
       <FlatList
         style={{ flex: 1 }}
         data={messages}
-        renderItem={({ item, index }) => <Message {...item} />}
+        renderItem={({ item }) => <Message {...item} />}
         keyExtractor={(item) => `${item.id}`}
         inverted
         onScroll={async ({ nativeEvent }) => {
@@ -208,7 +220,7 @@ export default function Chat({ navigation, route }: ScreenProps) {
                               document.uri,
                               {
                                 encoding: "base64",
-                              },
+                              }
                             );
                             const buffer = Buffer.from(base64, "base64");
                             return {
@@ -221,7 +233,7 @@ export default function Chat({ navigation, route }: ScreenProps) {
                                     ? "audio"
                                     : "file",
                             };
-                          }),
+                          })
                         );
 
                         files.forEach((file) => {

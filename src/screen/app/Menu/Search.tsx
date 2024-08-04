@@ -19,10 +19,10 @@ export default function Search({ navigation }: ScreenProps) {
         `/user/search?q=${encodeURIComponent(search)}`,
         { signal: controller.signal },
       );
-      if (res.ok) {
-        const json = await res.json();
-        setUsers(json.data.users);
-      }
+      if (!res.ok || res.status === 204) return;
+
+      const json = await res.json();
+      setUsers(json.data.users);
     });
 
     return () => {

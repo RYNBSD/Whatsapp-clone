@@ -13,13 +13,14 @@ export default function Chats({ navigation }: Props) {
     const controller = new AbortController();
     handleAsync(async () => {
       const res = await request("/user/chats", { signal: controller.signal });
-      if (!res.ok) return;
+      if (!res.ok || res.status === 204) return;
 
       const json = await res.json();
       setChats(json.data.chats);
     });
     return () => {
       controller.abort();
+      setChats([]);
     };
   });
 

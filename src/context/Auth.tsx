@@ -8,7 +8,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useState,
   useTransition,
 } from "react";
@@ -17,6 +16,7 @@ import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
 import { object2formData, request } from "../util";
 import { Alert } from "react-native";
+import { AUTHORIZATION } from "../constant";
 
 type AuthValue = {
   user: User | null;
@@ -36,7 +36,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
   const [_isPending, startTransition] = useTransition();
   const [user, setUser] = useState<User | null>(null);
-  const authorization = useMemo(() => "authorization", []);
 
   const onChangeText = useCallback((key: keyof User, text: string) => {
     startTransition(() => {
@@ -94,14 +93,14 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     const res = await request("/auth/sign-out", { method: "POST" });
     if (res.ok) {
-      await SecureStore.deleteItemAsync(authorization);
+      await SecureStore.deleteItemAsync(AUTHORIZATION);
       setUser(null);
       navigation.navigate("Auth", { screen: "SignIn" });
     } else {
       const json = await res.json();
       Alert.alert("Error", json?.data?.message ?? "Can't Sign up");
     }
-  }, [authorization, navigation]);
+  }, [navigation]);
 
   const update = useCallback(
     async (image: ImagePickerAsset | null) => {
@@ -130,13 +129,14 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const remove = useCallback(async () => {
     const res = await request("/user", { method: "DELETE" });
     if (res.ok) {
-      await SecureStore.deleteItemAsync(authorization);
-      return setUser(null);
+      await SecureStore.deleteItemAsync(AUTHORIZATION);
+      setUser(null);
+      navigation.navigate("Auth", { screen: "SignUp" });
+    } else {
+      const json = await res.json();
+      Alert.alert("Error", json?.data?.message ?? "Can't delete");
     }
-
-    const json = await res.json();
-    Alert.alert("Error", json?.data?.message ?? "Can't delete");
-  }, [authorization]);
+  }, [navigation]);
 
   useEffect(() => {
     const delay = 6000 * 10; // 10 minute

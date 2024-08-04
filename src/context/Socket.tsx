@@ -3,6 +3,8 @@ import { BASE_URL } from "@env";
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { io, type Socket } from "socket.io-client";
+import * as SecureStore from "expo-secure-store";
+import { AUTHORIZATION } from "../constant";
 
 type SocketValue = {
   socket: Socket;
@@ -13,7 +15,13 @@ const SocketContext = createContext<SocketValue | null>(null);
 
 export default function SocketProvider({ children }: { children: ReactNode }) {
   const [connectedContacts, setConnectedContacts] = useState<number[]>([]);
-  const socket = useMemo(() => io(BASE_URL, { withCredentials: true }), []);
+  const socket = useMemo(() => {
+    const token = SecureStore.getItem(AUTHORIZATION);
+    return io(BASE_URL, {
+      withCredentials: true,
+      query: { authorization: `Bearer ${token}` },
+    });
+  }, []);
 
   useEffect(() => {
     socket.once("connected-contacts", (contacts: number[]) => {

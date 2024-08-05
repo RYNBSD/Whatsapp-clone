@@ -122,8 +122,8 @@ export default {
         },
       });
   },
-  async forgotPassword(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {},
-  async resetPassword(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {},
+  // async forgotPassword(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {},
+  // async resetPassword(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {},
   async status(_req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
     res.status(StatusCodes.OK).json({ success: true });
   },

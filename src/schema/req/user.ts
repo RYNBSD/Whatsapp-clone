@@ -12,11 +12,11 @@ export default {
       lastId: z.coerce.number().optional(),
     }),
   },
-  IsContact: {
-    Query: z.object({
-      contactId: z.coerce.number(),
-    }),
-  },
+  // IsContact: {
+  //   Query: z.object({
+  //     contactId: z.coerce.number(),
+  //   }),
+  // },
   Update: {
     Body: z.object({
       username: z.string().trim().min(1),

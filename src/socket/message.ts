@@ -42,6 +42,8 @@ export async function onMessage(
 }
 
 export async function onTyping(socket: Socket, args: { to: number; length: number }) {
+  console.log(args);
+
   const { Socket } = model;
   const receiver = await Socket.findOne({
     where: { userId: args.to },
@@ -51,6 +53,8 @@ export async function onTyping(socket: Socket, args: { to: number; length: numbe
   });
   if (receiver === null) return;
 
+  console.log(args);
+
   const req = socket.request as Request;
   socket.to(receiver.dataValues.socketId).emit("typing", { from: req.user!.dataValues.id, length: args.length });
 }
@@ -58,7 +62,15 @@ export async function onTyping(socket: Socket, args: { to: number; length: numbe
 export async function onSeen(socket: Socket, arg: { messageId: number }) {
   const { Socket, Message } = model;
 
-  const message = await Message.update(
+  const message = await Message.findOne({
+    where: { id: arg.messageId },
+    limit: 1,
+    plain: true,
+    transaction: socket.locals.transaction,
+  });
+  if (message === null || message.dataValues.seen) return;
+
+  await message.update(
     { seen: true },
     {
       fields: ["seen"],
@@ -69,12 +81,12 @@ export async function onSeen(socket: Socket, arg: { messageId: number }) {
   );
 
   const user = await Socket.findOne({
-    where: { userId: message[1][0]?.dataValues.sender ?? 0 },
+    where: { userId: message.dataValues.sender ?? 0 },
     limit: 1,
     plain: true,
     transaction: socket.locals.transaction,
   });
 
-  if (user === null) return;
-  socket.to(user.dataValues.socketId).emit("seen", { messageId: arg.messageId });
+  socket.emit("seen", { messageId: arg.messageId });
+  if (user !== null) socket.to(user.dataValues.socketId).emit("seen", { messageId: arg.messageId });
 }

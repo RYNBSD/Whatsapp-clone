@@ -1,7 +1,6 @@
 import type { Request, Response, NextFunction, RequestHandler } from "express";
 import type { Socket } from "socket.io";
 import type { ResponseFailed, ResponseLocals } from "../types/index.js";
-import { BaseError } from "../error/index.js";
 
 type HandleAsyncFn = ((req: Request, res: Response<any, any>, next: NextFunction) => Promise<void>) | RequestHandler;
 
@@ -56,13 +55,13 @@ export function handleSocket(fn: HandleSocketFn) {
   };
 }
 
-export function handleSocketHandshake(middleware: RequestHandler) {
-  return (req: Request & { _query: Record<string, string> }, res: Response, next: NextFunction) => {
-    const isHandshake = typeof req?._query?.sid === "undefined";
-    if (isHandshake) {
-      middleware(req, res, next);
-    } else {
-      next();
-    }
-  };
-}
+// export function handleSocketHandshake(middleware: RequestHandler) {
+//   return (req: Request & { _query: Record<string, string> }, res: Response, next: NextFunction) => {
+//     const isHandshake = typeof req?._query?.sid === "undefined";
+//     if (isHandshake) {
+//       middleware(req, res, next);
+//     } else {
+//       next();
+//     }
+//   };
+// }

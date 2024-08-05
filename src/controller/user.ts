@@ -8,7 +8,7 @@ import { model } from "../model/index.js";
 import FileUploader from "../lib/upload.js";
 import { APIError } from "../error/index.js";
 
-const { Search, Messages, IsContact, Update } = schema.req.user;
+const { Search, Messages, Update } = schema.req.user;
 
 export default {
   async search(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
@@ -109,20 +109,20 @@ export default {
       },
     });
   },
-  async isContact(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
-    const { Query } = IsContact;
-    const { contactId } = Query.parse(req.query);
+  // async isContact(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
+  //   const { Query } = IsContact;
+  //   const { contactId } = Query.parse(req.query);
 
-    const { Message } = model;
-    const check = await Message.findOne({
-      where: { receiver: contactId, sender: req.user!.dataValues.id },
-      limit: 1,
-      plain: true,
-    });
-    if (check === null) throw APIError.controller(StatusCodes.NOT_FOUND, "Contact not found");
+  //   const { Message } = model;
+  //   const check = await Message.findOne({
+  //     where: { receiver: contactId, sender: req.user!.dataValues.id },
+  //     limit: 1,
+  //     plain: true,
+  //   });
+  //   if (check === null) throw APIError.controller(StatusCodes.NOT_FOUND, "Contact not found");
 
-    res.status(StatusCodes.OK).json({ success: true });
-  },
+  //   res.status(StatusCodes.OK).json({ success: true });
+  // },
   async update(req: Request, res: Response<ResponseSuccess, ResponseLocals>) {
     let newImage = req.user!.dataValues.image;
 

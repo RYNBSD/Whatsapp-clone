@@ -3,7 +3,7 @@ import { BASE_URL } from "@env";
 import type { Message as TMessage } from "../types";
 import type { ElementRef, FC } from "react";
 import { memo, useEffect, useId, useRef, useState } from "react";
-import { Alert, Dimensions, View } from "react-native";
+import { Alert, View } from "react-native";
 import { Button, IconButton, Text, TouchableRipple } from "react-native-paper";
 import { Image } from "expo-image";
 import { Video as ExpoVideo } from "expo-av";
@@ -11,9 +11,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { documentDirectory, downloadAsync } from "expo-file-system";
 import useEffectOnce from "react-use/lib/useEffectOnce";
 import { useAudio, useAuth, useMediaLibrary, useSocket } from "../context";
-import { handleAsync, millis2time } from "../util";
+import { handleAsync, isInView, millis2time } from "../util";
 
-// TODO: Fix audio load and unload
 function Audio({ message }: { message: string }) {
   const id = useId();
   const { soundsStatus, initSound, playSound } = useAudio()!;
@@ -121,18 +120,7 @@ const Message: FC<Props> = ({ id, sender, receiver, message, type, seen }) => {
       if (!ref.current) return;
 
       ref.current.measure((_x, _y, width, height, pageX, pageY) => {
-        const rectTop = pageX;
-        const rectBottom = pageY + height;
-        const rectWidth = pageX + width;
-        const window = Dimensions.get("window");
-        const isVisible =
-          rectBottom !== 0 &&
-          rectTop >= 0 &&
-          rectBottom <= window.height &&
-          rectWidth > 0 &&
-          rectWidth <= window.width;
-
-        if (!isVisible) return;
+        if (!isInView(width, height, pageX, pageY)) return;
         socket.volatile.emit("seen", { messageId: id });
       });
     }, 1000);
@@ -159,8 +147,8 @@ const Message: FC<Props> = ({ id, sender, receiver, message, type, seen }) => {
         style={{
           maxWidth: "90%",
           flexDirection: user!.id === receiver ? "row-reverse" : "row",
+          alignItems: "flex-end",
           marginHorizontal: 10,
-          alignItems: "center",
           gap: 5,
           alignSelf: user!.id === receiver ? "flex-start" : "flex-end",
         }}

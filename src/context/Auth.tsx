@@ -14,8 +14,9 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
-import { object2formData, request } from "../util";
+import useEffectOnce from "react-use/lib/useEffectOnce";
 import { Alert } from "react-native";
+import { handleAsync, object2formData, request } from "../util";
 import { AUTHORIZATION } from "../constant";
 
 type AuthValue = {
@@ -39,21 +40,29 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const onChangeText = useCallback((key: keyof User, text: string) => {
     startTransition(() => {
+      const trimmed = text.trimStart();
+      if (trimmed.length === 0 && text.length > 0) return;
       setUser((prev) => (prev === null ? prev : { ...prev, [key]: text }));
     });
   }, []);
 
-  const me = useCallback(async () => {
-    const res = await request("/auth/me", { method: "POST" });
+  const me = useCallback(async (init?: RequestInit) => {
+    const res = await request("/auth/me", { ...init, method: "POST" });
     if (!res.ok) return;
 
     const json = await res.json();
     setUser(json.data.user);
   }, []);
 
-  useEffect(() => {
-    me().finally(() => SplashScreen.hideAsync());
-  }, [me]);
+  useEffectOnce(() => {
+    const controller = new AbortController();
+    handleAsync(() => me({ signal: controller.signal })).finally(() =>
+      SplashScreen.hideAsync(),
+    );
+    return () => {
+      controller.abort();
+    };
+  });
 
   const signUp = useCallback(
     async (body: FormData) => {
@@ -61,11 +70,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
         body,
       });
-      const json = await res.json();
 
-      if (res.ok) {
-        navigation.navigate("Auth", { screen: "SignIn" });
-      } else {
+      if (res.ok) navigation.navigate("Auth", { screen: "SignIn" });
+      else {
+        const json = await res.json();
         Alert.alert("Error", json?.data?.message ?? "Can't Sign up");
       }
     },
@@ -142,17 +150,21 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     const delay = 6000 * 10; // 10 minute
 
     const interval = setInterval(async () => {
-      const controller = new AbortController();
+      await handleAsync(async () => {
+        const controller = new AbortController();
 
-      const timeout = setTimeout(() => {
-        controller.abort();
-      }, delay);
+        const timeout = setTimeout(() => {
+          controller.abort();
+        }, delay);
 
-      const res = await request("/auth/status", { signal: controller.signal });
-      clearTimeout(timeout);
+        const res = await request("/auth/status", {
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
 
-      if (res.ok) return;
-      await me();
+        if (res.ok) return;
+        await me();
+      });
     }, delay);
 
     return () => {

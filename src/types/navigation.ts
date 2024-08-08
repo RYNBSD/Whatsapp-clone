@@ -6,5 +6,5 @@ import type {
 
 export type ScreenProps<P extends ParamListBase = ParamListBase> = {
   navigation: NavigationProp<P>;
-  route: RouteProp<P>;
+  route: RouteProp<Record<string, any>>;
 };

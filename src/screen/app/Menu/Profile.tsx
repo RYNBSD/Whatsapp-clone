@@ -11,19 +11,77 @@ import {
 } from "react-native-paper";
 import isEmpty from "validator/lib/isEmpty";
 import { Image } from "expo-image";
-import {
-  type ImagePickerAsset,
-  launchImageLibraryAsync,
-  MediaTypeOptions,
-} from "expo-image-picker";
-import { useState } from "react";
+import { launchImageLibraryAsync, MediaTypeOptions } from "expo-image-picker";
+import { useEffect } from "react";
 import { useAuth } from "../../../context";
 import { handleAsync } from "../../../util";
+import { useImagePicker } from "../../../hook";
+
+function ImagePicker() {
+  const theme = useTheme();
+  const { user } = useAuth()!;
+  const { image, setImage } = useImagePicker();
+
+  return (
+    <TouchableRipple
+      rippleColor={theme.colors.background}
+      onPress={async () => {
+        await handleAsync(async () => {
+          const result = await launchImageLibraryAsync({
+            mediaTypes: MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 1,
+          });
+          if (!result.canceled) setImage(result.assets[0]);
+        });
+      }}
+    >
+      <Image
+        source={image !== null ? image.uri : `${BASE_URL}/${user!.image}`}
+        style={{ width: 150, height: 150, borderRadius: 75 }}
+        contentFit="cover"
+      />
+    </TouchableRipple>
+  );
+}
+
+function UsernameInput() {
+  const { user, onChangeText } = useAuth()!;
+  return (
+    <TextInput
+      mode="outlined"
+      label="Username"
+      value={user!.username}
+      onChangeText={(text) => {
+        onChangeText("username", text);
+      }}
+    />
+  );
+}
+
+function UpdateButton() {
+  const { update } = useAuth()!;
+  const { image, reset } = useImagePicker();
+  return (
+    <Button
+      onPress={async () => {
+        await handleAsync(async () => {
+          await update(image);
+          reset();
+        });
+      }}
+    >
+      Update
+    </Button>
+  );
+}
 
 export default function Profile() {
   const theme = useTheme();
-  const [image, setImage] = useState<ImagePickerAsset | null>(null);
-  const { user, onChangeText, update, remove } = useAuth()!;
+  const { user, remove } = useAuth()!;
+  const { reset } = useImagePicker();
+
+  useEffect(() => reset, [reset]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -33,35 +91,10 @@ export default function Profile() {
       >
         <Card.Content>
           <View style={{ width: "100%", alignItems: "center" }}>
-            <TouchableRipple
-              rippleColor={theme.colors.background}
-              onPress={async () => {
-                await handleAsync(async () => {
-                  const result = await launchImageLibraryAsync({
-                    mediaTypes: MediaTypeOptions.Images,
-                    allowsEditing: true,
-                    quality: 1,
-                  });
-                  if (!result.canceled) setImage(result.assets[0]);
-                });
-              }}
-            >
-              <Image
-                source={
-                  image !== null ? image.uri : `${BASE_URL}/${user!.image}`
-                }
-                style={{ width: 150, height: 150, borderRadius: 75 }}
-                contentFit="cover"
-              />
-            </TouchableRipple>
+            <ImagePicker />
           </View>
           <View style={{ width: "100%" }}>
-            <TextInput
-              mode="outlined"
-              label="Username"
-              value={user!.username}
-              onChangeText={(text) => onChangeText("username", text)}
-            />
+            <UsernameInput />
             <HelperText type="error" visible={isEmpty(user!.username)}>
               Username required!
             </HelperText>
@@ -91,16 +124,7 @@ export default function Profile() {
         </Card.Content>
         <Card.Actions>
           <Button onPress={() => handleAsync(() => remove())}>Delete</Button>
-          <Button
-            onPress={async () => {
-              await handleAsync(async () => {
-                await update(image);
-                setImage(null);
-              });
-            }}
-          >
-            Update
-          </Button>
+          <UpdateButton />
         </Card.Actions>
       </Card>
     </View>

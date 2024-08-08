@@ -1,5 +1,5 @@
 import { createMaterialBottomTabNavigator } from "react-native-paper/react-navigation";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { Appbar, Menu } from "react-native-paper";
 import { useAuth, useCamera } from "../../../context";
@@ -7,13 +7,38 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const BottomTap = createMaterialBottomTabNavigator();
 
-export default function App() {
+function AppBarMenu({ children }: { children: ReactNode }) {
   const safeAreaInsets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
+
+  return (
+    <Menu
+      style={{ paddingTop: safeAreaInsets.top }}
+      visible={visible}
+      onDismiss={() => setVisible(false)}
+      anchor={
+        <Appbar.Action
+          icon={(props) => (
+            <MaterialCommunityIcons
+              {...props}
+              name="dots-vertical"
+              size={24}
+              onPress={() => setVisible(true)}
+            />
+          )}
+        />
+      }
+    >
+      {children}
+    </Menu>
+  );
+}
+
+export default function App() {
   const { open, checkPermission: checkCameraPermission } = useCamera()!;
-  const { signOut } = useAuth()!;
   // const { checkPermission: checkAudioPermission } = useAudio()!;
   // const { checkPermission: checkMediaLibraryPermission } = useMediaLibrary()!;
+  const { signOut } = useAuth()!;
 
   return (
     <>
@@ -35,25 +60,9 @@ export default function App() {
             />
           )}
         />
-        <Menu
-          style={{ paddingTop: safeAreaInsets.top }}
-          visible={visible}
-          onDismiss={() => setVisible(false)}
-          anchor={
-            <Appbar.Action
-              icon={(props) => (
-                <MaterialCommunityIcons
-                  {...props}
-                  name="dots-vertical"
-                  size={24}
-                  onPress={() => setVisible(true)}
-                />
-              )}
-            />
-          }
-        >
+        <AppBarMenu>
           <Menu.Item title="Sign out" onPress={signOut} />
-        </Menu>
+        </AppBarMenu>
       </Appbar.Header>
       <BottomTap.Navigator>
         <BottomTap.Screen

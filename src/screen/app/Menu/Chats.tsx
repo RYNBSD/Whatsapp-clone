@@ -1,10 +1,10 @@
 import type { ScreenProps, User } from "../../../types";
 import { useState } from "react";
 import { FlatList } from "react-native";
+import { Divider } from "react-native-paper";
 import useEffectOnce from "react-use/lib/useEffectOnce";
 import { handleAsync, request } from "../../../util";
 import { UserCard } from "../../../components";
-import { Divider } from "react-native-paper";
 
 export default function Chats({ navigation }: Props) {
   const [chats, setChats] = useState<User[]>([]);
@@ -20,7 +20,6 @@ export default function Chats({ navigation }: Props) {
     });
     return () => {
       controller.abort();
-      setChats([]);
     };
   });
 

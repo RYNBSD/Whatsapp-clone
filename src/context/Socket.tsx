@@ -28,16 +28,13 @@ export default function SocketProvider({ children }: { children: ReactNode }) {
       setConnectedContacts(contacts);
     });
 
-    socket.on(
-      "contact-status",
-      async (args: { userId: number; status: boolean }) => {
-        setConnectedContacts((prev) =>
-          args.status
-            ? [...prev, args.userId]
-            : prev.filter((id) => id !== args.userId),
-        );
-      },
-    );
+    socket.on("contact-status", (args: { userId: number; status: boolean }) => {
+      setConnectedContacts((prev) =>
+        args.status
+          ? [...prev, args.userId]
+          : prev.filter((id) => id !== args.userId),
+      );
+    });
 
     return () => {
       socket.off("connected-contacts");

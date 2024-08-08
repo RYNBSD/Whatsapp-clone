@@ -1,14 +1,44 @@
-import type { ScreenProps } from "../../../types";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { type ParamListBase, useNavigation } from "@react-navigation/native";
 import { useEffect, useState, useTransition } from "react";
-import { FlatList, View } from "react-native";
 import { Divider, Searchbar } from "react-native-paper";
+import { FlatList, View } from "react-native";
+import { create } from "zustand";
 import { handleAsync, request } from "../../../util";
 import { UserCard } from "../../../components";
 
-export default function Search({ navigation }: ScreenProps) {
-  const [users, setUsers] = useState<Record<string, any>[]>([]);
-  const [search, setSearch] = useState("");
+const useSearch = create<{
+  search: string;
+  setSearch: (search: string) => void;
+}>((set) => ({
+  search: "",
+  setSearch: (search: string) => set((state) => ({ ...state, search })),
+}));
+
+function SearchInput() {
   const [_isPending, startTransition] = useTransition();
+  const { search, setSearch } = useSearch();
+
+  return (
+    <Searchbar
+      mode="view"
+      placeholder="Search"
+      value={search}
+      onChangeText={(text) => {
+        startTransition(() => {
+          const trimmed = text.trimStart();
+          if (trimmed.length === 0 && text.length > 0) return;
+          setSearch(trimmed);
+        });
+      }}
+    />
+  );
+}
+
+function SearchList() {
+  const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
+  const [users, setUsers] = useState<Record<string, any>[]>([]);
+  const { search } = useSearch();
 
   useEffect(() => {
     if (search.length === 0) return;
@@ -31,36 +61,33 @@ export default function Search({ navigation }: ScreenProps) {
   }, [search]);
 
   return (
+    <FlatList
+      data={users}
+      renderItem={({ item, index }) => (
+        <>
+          {/* @ts-ignore */}
+          <UserCard
+            {...item}
+            onPress={() =>
+              navigation.navigate("App", {
+                screen: "Chat",
+                params: { user: item },
+              })
+            }
+          />
+          {index !== users.length - 1 && <Divider />}
+        </>
+      )}
+      // keyExtractor={(item) => item.id}
+    />
+  );
+}
+
+export default function Search() {
+  return (
     <View style={{ flex: 1 }}>
-      <Searchbar
-        mode="view"
-        placeholder="Search"
-        value={search}
-        onChangeText={(text) => {
-          startTransition(() => {
-            setSearch(text);
-          });
-        }}
-      />
-      <FlatList
-        data={users}
-        renderItem={({ item, index }) => (
-          <>
-            {/* @ts-ignore */}
-            <UserCard
-              {...item}
-              onPress={() =>
-                navigation.navigate("App", {
-                  screen: "Chat",
-                  params: { user: item },
-                })
-              }
-            />
-            {index !== users.length - 1 && <Divider />}
-          </>
-        )}
-        // keyExtractor={(item) => item.id}
-      />
+      <SearchInput />
+      <SearchList />
     </View>
   );
 }

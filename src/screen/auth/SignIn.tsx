@@ -1,4 +1,4 @@
-import { useTransition } from "react";
+import { useEffect, useTransition } from "react";
 import { View } from "react-native";
 import {
   TextInput,
@@ -20,12 +20,14 @@ type Fields = { email: string; password: string };
 const useFields = create<
   {
     setFields: (key: keyof Fields, text: string) => void;
+    reset: () => void;
   } & Fields
 >((set) => ({
   email: "",
   password: "",
   setFields: (key: keyof Fields, text: string) =>
     set((state) => ({ ...state, [key]: text })),
+  reset: () => set((state) => ({ ...state, email: "", password: "" })),
 }));
 
 function EmailField() {
@@ -98,6 +100,13 @@ function SubmitButton() {
 
 export default function SignUp({ navigation }: Props) {
   const theme = useTheme();
+  const { reset } = useFields();
+
+  useEffect(() => {
+    return () => {
+      reset();
+    };
+  }, [reset]);
 
   return (
     <View

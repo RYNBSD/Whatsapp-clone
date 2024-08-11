@@ -89,6 +89,15 @@ function MessageInput({ user }: { user: User }) {
   );
 }
 
+function ChatInput({ user }: { user: User }) {
+  const { recordingStatus } = useAudio()!;
+  return recordingStatus !== null && recordingStatus.isRecording ? (
+    <VoiceTimer />
+  ) : (
+    <MessageInput user={user} />
+  );
+}
+
 function SendIcon({ user }: { user: User }) {
   const { message, setMessage } = useMessage();
   const { socket } = useSocket()!;
@@ -156,8 +165,6 @@ function ChatAction({ user }: { user: User }) {
 }
 
 function ChatFooter({ user }: { user: User }) {
-  const { recordingStatus } = useAudio()!;
-
   return (
     <View
       style={{
@@ -168,11 +175,7 @@ function ChatFooter({ user }: { user: User }) {
         marginBottom: 10,
       }}
     >
-      {recordingStatus !== null && recordingStatus.isRecording ? (
-        <VoiceTimer />
-      ) : (
-        <MessageInput user={user} />
-      )}
+      <ChatInput user={user} />
       <ChatAction user={user} />
     </View>
   );

@@ -36,6 +36,7 @@ type Fields = {
 const useFields = create<
   {
     setFields: (key: keyof Fields, text: string) => void;
+    reset: () => void;
   } & Fields
 >((set) => ({
   username: "",
@@ -45,6 +46,15 @@ const useFields = create<
   password: "",
   setFields: (key: keyof Fields, text: string) =>
     set((state) => ({ ...state, [key]: text })),
+  reset: () =>
+    set((state) => ({
+      ...state,
+      username: "",
+      email: "",
+      country: "",
+      phone: "",
+      password: "",
+    })),
 }));
 
 function ImagePicker() {
@@ -231,9 +241,15 @@ function SubmitButton() {
 
 export default function SignUp({ navigation }: Props) {
   const theme = useTheme();
-  const { reset } = useImagePicker();
+  const { reset: imagePickerReset } = useImagePicker();
+  const { reset: fieldsReset } = useFields();
 
-  useEffect(() => reset, [reset]);
+  useEffect(() => {
+    return () => {
+      imagePickerReset();
+      fieldsReset();
+    };
+  }, [fieldsReset, imagePickerReset]);
 
   return (
     <View

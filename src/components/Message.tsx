@@ -109,7 +109,6 @@ function File({ message }: { message: string }) {
 
 const Message: FC<Props> = ({ id, sender, receiver, message, type, seen }) => {
   const ref = useRef<ElementRef<typeof TouchableRipple>>(null);
-  const [openMenu, setOpenMenu] = useState(false);
   const { user } = useAuth()!;
   const { socket } = useSocket()!;
 
@@ -138,11 +137,7 @@ const Message: FC<Props> = ({ id, sender, receiver, message, type, seen }) => {
         width: "100%",
         marginVertical: 5,
       }}
-      onLongPress={() => setOpenMenu(true)}
     >
-      {/* <Menu visible={openMenu} onDismiss={() => setOpenMenu(false)}>
-        <Menu.Item title="delete" />
-      </Menu> */}
       <View
         style={{
           maxWidth: "90%",

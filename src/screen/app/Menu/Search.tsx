@@ -10,9 +10,11 @@ import { UserCard } from "../../../components";
 const useSearch = create<{
   search: string;
   setSearch: (search: string) => void;
+  reset: () => void;
 }>((set) => ({
   search: "",
   setSearch: (search: string) => set((state) => ({ ...state, search })),
+  reset: () => set((state) => ({ ...state, search: "" })),
 }));
 
 function SearchInput() {
@@ -84,6 +86,14 @@ function SearchList() {
 }
 
 export default function Search() {
+  const { reset } = useSearch();
+
+  useEffect(() => {
+    return () => {
+      reset();
+    };
+  }, [reset]);
+
   return (
     <View style={{ flex: 1 }}>
       <SearchInput />

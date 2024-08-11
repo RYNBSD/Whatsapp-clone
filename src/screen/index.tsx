@@ -6,11 +6,22 @@ import { useAuth } from "../context";
 
 const Stack = createNativeStackNavigator();
 
+function Route() {
+  const { user } = useAuth()!;
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {user === null ? (
+        <Stack.Screen name="Auth" component={require("./auth/index").default} />
+      ) : (
+        <Stack.Screen name="App" component={require("./app/index").default} />
+      )}
+    </Stack.Navigator>
+  );
+}
+
 export default function Screen() {
   const theme = useTheme();
   const safeAreaInsets = useSafeAreaInsets();
-
-  const { user } = useAuth()!;
 
   return (
     <View
@@ -22,16 +33,7 @@ export default function Screen() {
         backgroundColor: theme.colors.background,
       }}
     >
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {user === null ? (
-          <Stack.Screen
-            name="Auth"
-            component={require("./auth/index").default}
-          />
-        ) : (
-          <Stack.Screen name="App" component={require("./app/index").default} />
-        )}
-      </Stack.Navigator>
+      <Route />
     </View>
   );
 }

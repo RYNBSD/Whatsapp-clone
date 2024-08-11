@@ -81,7 +81,11 @@ export default function Profile() {
   const { user, remove } = useAuth()!;
   const { reset } = useImagePicker();
 
-  useEffect(() => reset, [reset]);
+  useEffect(() => {
+    return () => {
+      reset();
+    };
+  }, [reset]);
 
   return (
     <View style={{ flex: 1 }}>

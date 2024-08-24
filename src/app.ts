@@ -41,7 +41,12 @@ if (!global.isProduction) {
 
 app.use(timeout(1000 * 60 * 5)); // 5 minutes
 app.use(responseTime());
-app.use(cors({ credentials: true }));
+app.use(
+  cors({
+    origin: (origin, callback) => callback(null, origin),
+    credentials: true,
+  }),
+);
 app.use(config.app.limiter);
 app.use(compression({ level: 9 }));
 app.use(methodOverride(KEYS.HTTP.HEADERS.METHOD_OVERRIDE)); // default: X-HTTP-Method-Override

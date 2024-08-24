@@ -42,8 +42,6 @@ export async function onMessage(
 }
 
 export async function onTyping(socket: Socket, args: { to: number; length: number }) {
-  console.log(args);
-
   const { Socket } = model;
   const receiver = await Socket.findOne({
     where: { userId: args.to },

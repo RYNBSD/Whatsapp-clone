@@ -29,10 +29,13 @@ process.on("uncaughtException", async (error) => {
   process.exit(1);
 });
 
-const server = http.createServer(app);
+const server = http.createServer(async (req, res) => app(req, res));
 await cache.connect();
 
-global.io = new SocketServer(server, { maxHttpBufferSize: 1e8 });
+global.io = new SocketServer(server, {
+  maxHttpBufferSize: 1e8,
+  cors: { credentials: true, origin: (origin, callback) => callback(null, origin) },
+});
 global.io.adapter(createAdapter(global.mongo.db().collection(KEYS.CACHE.COLLECTION.SOCKET)));
 await import("./socket/index.js");
 

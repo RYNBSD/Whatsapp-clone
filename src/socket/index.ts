@@ -26,7 +26,6 @@ global.io.use((socket, next) => {
   const token = authorization.split(" ")[1] ?? "";
   if (token.length === 0) return next(new Error("Empty token"));
 
-  console.log(3);
   const { jwt } = util;
   const payload = jwt.verify(token) as { email?: string } | null;
   console.log(payload);

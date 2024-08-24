@@ -17,8 +17,8 @@ export default function Chat({ route }: ScreenProps) {
   usePreventScreenCapture();
   const theme = useTheme();
   const { clearSounds } = useAudio()!;
-  const { reset: messagesReset } = useMessages();
-  const { reset: messageReset } = useMessage();
+  const messagesReset = useMessages((state) => state.reset);
+  const messageReset = useMessage((state) => state.reset);
 
   useEffect(() => {
     return () => {

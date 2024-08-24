@@ -1,5 +1,5 @@
 import type { User, Message as TMessage } from "../../../types";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FlatList } from "react-native";
 import useEffectOnce from "react-use/lib/useEffectOnce";
 import { handleAsync, isCloseToBottom, request } from "../../../util";
@@ -8,33 +8,39 @@ import { useMessages } from "./store";
 import Message from "../../Message";
 
 export default function ChatList({ user }: { user: User }) {
-  const { messages, setMessages } = useMessages();
+  const setMessages = useMessages((state) => state.setMessages);
+  const messages = useMessages((state) => state.messages);
+  const [isFetching, setIsFetching] = useState(false);
+  const [noContent, setNoContent] = useState(false);
   const { socket } = useSocket()!;
 
   const getMessages = useCallback(
     async (init?: RequestInit) => {
+      if (isFetching || noContent) return;
       const res = await request(
         `/user/messages?receiverId=${encodeURIComponent(user.id)}${
           messages.length > 0
             ? `&lastId=${encodeURIComponent(messages[messages.length - 1].id)}`
             : ""
         }`,
-        init,
+        init
       );
-      if (!res.ok || res.status === 204) return;
+      if (res.status === 204) return setNoContent(true);
+      if (!res.ok) return;
 
       const json = await res.json();
       const jsonMessages = json.data.messages as TMessage[];
       setMessages((prev) => prev.concat(jsonMessages));
     },
-    [messages, setMessages, user.id],
+    [isFetching, messages, noContent, setMessages, user.id]
   );
 
   useEffectOnce(() => {
     const controller = new AbortController();
-
-    handleAsync(() => getMessages());
-
+    handleAsync(() => {
+      setIsFetching(true);
+      getMessages({ signal: controller.signal });
+    }).finally(() => setIsFetching(false));
     return () => {
       controller.abort();
     };
@@ -51,7 +57,7 @@ export default function ChatList({ user }: { user: User }) {
         prev.map((message) => {
           if (message.id === arg.messageId) message.seen = true;
           return message;
-        }),
+        })
       );
     };
     socket.on("seen", seenCallback);
@@ -72,8 +78,9 @@ export default function ChatList({ user }: { user: User }) {
       onScroll={async ({ nativeEvent }) => {
         if (!isCloseToBottom(nativeEvent)) return;
         handleAsync(async () => {
+          setIsFetching(true);
           await getMessages();
-        });
+        }).finally(() => setIsFetching(false));
       }}
     />
   );

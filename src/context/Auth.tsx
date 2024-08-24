@@ -42,7 +42,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     startTransition(() => {
       const trimmed = text.trimStart();
       if (trimmed.length === 0 && text.length > 0) return;
-      setUser((prev) => (prev === null ? prev : { ...prev, [key]: text }));
+      setUser((prev) => {
+        if (prev === null) return prev;
+        if (prev[key] === trimmed) return prev;
+        return { ...prev, [key]: trimmed };
+      });
     });
   }, []);
 
@@ -57,7 +61,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   useEffectOnce(() => {
     const controller = new AbortController();
     handleAsync(() => me({ signal: controller.signal })).finally(() =>
-      SplashScreen.hideAsync(),
+      SplashScreen.hideAsync()
     );
     return () => {
       controller.abort();
@@ -77,7 +81,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         Alert.alert("Error", json?.data?.message ?? "Can't Sign up");
       }
     },
-    [navigation],
+    [navigation]
   );
 
   const signIn = useCallback(
@@ -95,7 +99,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         Alert.alert("Error", json?.data?.message ?? "Can't Sign up");
       }
     },
-    [navigation],
+    [navigation]
   );
 
   const signOut = useCallback(async () => {
@@ -131,7 +135,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       if (res.ok) setUser(json.data.user);
       else Alert.alert("Error", json?.data?.message ?? "Can't update");
     },
-    [user],
+    [user]
   );
 
   const remove = useCallback(async () => {

@@ -13,13 +13,14 @@ const useSearch = create<{
   reset: () => void;
 }>((set) => ({
   search: "",
-  setSearch: (search: string) => set((state) => ({ ...state, search })),
-  reset: () => set((state) => ({ ...state, search: "" })),
+  setSearch: (search: string) => set({ search }),
+  reset: () => set({ search: "" }),
 }));
 
 function SearchInput() {
   const [_isPending, startTransition] = useTransition();
-  const { search, setSearch } = useSearch();
+  const search = useSearch((state) => state.search);
+  const setSearch = useSearch((state) => state.setSearch);
 
   return (
     <Searchbar
@@ -29,7 +30,8 @@ function SearchInput() {
       onChangeText={(text) => {
         startTransition(() => {
           const trimmed = text.trimStart();
-          if (trimmed.length === 0 && text.length > 0) return;
+          if ((trimmed.length === 0 && text.length > 0) || trimmed === search)
+            return;
           setSearch(trimmed);
         });
       }}
@@ -40,7 +42,7 @@ function SearchInput() {
 function SearchList() {
   const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
   const [users, setUsers] = useState<Record<string, any>[]>([]);
-  const { search } = useSearch();
+  const search = useSearch((state) => state.search);
 
   useEffect(() => {
     if (search.length === 0) return;
@@ -49,7 +51,7 @@ function SearchList() {
     handleAsync(async () => {
       const res = await request(
         `/user/search?q=${encodeURIComponent(search)}`,
-        { signal: controller.signal },
+        { signal: controller.signal }
       );
       if (!res.ok || res.status === 204) return;
 
@@ -86,7 +88,7 @@ function SearchList() {
 }
 
 export default function Search() {
-  const { reset } = useSearch();
+  const reset = useSearch((state) => state.reset);
 
   useEffect(() => {
     return () => {

@@ -12,7 +12,7 @@ import {
 import isEmpty from "validator/lib/isEmpty";
 import { Image } from "expo-image";
 import { launchImageLibraryAsync, MediaTypeOptions } from "expo-image-picker";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../../context";
 import { handleAsync } from "../../../util";
 import { useImagePicker } from "../../../hook";
@@ -20,7 +20,8 @@ import { useImagePicker } from "../../../hook";
 function ImagePicker() {
   const theme = useTheme();
   const { user } = useAuth()!;
-  const { image, setImage } = useImagePicker();
+  const image = useImagePicker((state) => state.image);
+  const setImage = useImagePicker((state) => state.setImage);
 
   return (
     <TouchableRipple
@@ -61,14 +62,18 @@ function UsernameInput() {
 
 function UpdateButton() {
   const { update } = useAuth()!;
-  const { image, reset } = useImagePicker();
+  const [disabled, setDisabled] = useState(false);
+  const image = useImagePicker((state) => state.image);
+  const reset = useImagePicker((state) => state.reset);
   return (
     <Button
+      disabled={disabled}
       onPress={async () => {
         await handleAsync(async () => {
+          setDisabled(true);
           await update(image);
           reset();
-        });
+        }).finally(() => setDisabled(false));
       }}
     >
       Update
@@ -76,10 +81,28 @@ function UpdateButton() {
   );
 }
 
+function DeleteButton() {
+  const { remove } = useAuth()!;
+  const [disabled, setDisabled] = useState(false);
+  return (
+    <Button
+      disabled={disabled}
+      onPress={() =>
+        handleAsync(async () => {
+          setDisabled(true);
+          await remove();
+        }).finally(() => setDisabled(false))
+      }
+    >
+      Delete
+    </Button>
+  );
+}
+
 export default function Profile() {
   const theme = useTheme();
-  const { user, remove } = useAuth()!;
-  const { reset } = useImagePicker();
+  const { user } = useAuth()!;
+  const reset = useImagePicker((state) => state.reset);
 
   useEffect(() => {
     return () => {
@@ -127,7 +150,7 @@ export default function Profile() {
           </View>
         </Card.Content>
         <Card.Actions>
-          <Button onPress={() => handleAsync(() => remove())}>Delete</Button>
+          <DeleteButton />
           <UpdateButton />
         </Card.Actions>
       </Card>

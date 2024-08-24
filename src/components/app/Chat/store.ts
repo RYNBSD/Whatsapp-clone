@@ -5,18 +5,17 @@ import { create } from "zustand";
 export const useMessages = create<{
   messages: Message[];
   setMessages: (
-    messages: Message[] | ((messages: Message[]) => Message[]),
+    messages: Message[] | ((messages: Message[]) => Message[])
   ) => void;
   reset: () => void;
-}>((set) => ({
+}>((set, get) => ({
   messages: [],
   setMessages: (messages: Message[] | ((messages: Message[]) => Message[])) =>
-    set((state) => ({
-      ...state,
+    set({
       messages:
-        typeof messages === "function" ? messages(state.messages) : messages,
-    })),
-  reset: () => set((state) => ({ ...state, messages: [] })),
+        typeof messages === "function" ? messages(get().messages) : messages,
+    }),
+  reset: () => set({ messages: [] }),
 }));
 
 // Chat message to send
@@ -26,6 +25,6 @@ export const useMessage = create<{
   reset: () => void;
 }>((set) => ({
   message: "",
-  setMessage: (message: string) => set((state) => ({ ...state, message })),
-  reset: () => set((state) => ({ ...state, message: "" })),
+  setMessage: (message: string) => set({ message }),
+  reset: () => set({ message: "" }),
 }));

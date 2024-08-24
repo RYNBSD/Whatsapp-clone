@@ -1,4 +1,4 @@
-import { useEffect, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { View } from "react-native";
 import {
   TextInput,
@@ -25,14 +25,14 @@ const useFields = create<
 >((set) => ({
   email: "",
   password: "",
-  setFields: (key: keyof Fields, text: string) =>
-    set((state) => ({ ...state, [key]: text })),
-  reset: () => set((state) => ({ ...state, email: "", password: "" })),
+  setFields: (key: keyof Fields, text: string) => set({ [key]: text }),
+  reset: () => set({ email: "", password: "" }),
 }));
 
 function EmailField() {
   const [_isPending, startTransition] = useTransition();
-  const { email, setFields } = useFields();
+  const email = useFields((state) => state.email);
+  const setFields = useFields((state) => state.setFields);
 
   return (
     <View style={{ width: "100%" }}>
@@ -43,7 +43,8 @@ function EmailField() {
         onChangeText={(text) => {
           startTransition(() => {
             const trimmed = text.trimStart();
-            if (trimmed.length === 0 && text.length > 0) return;
+            if ((trimmed.length === 0 && text.length > 0) || trimmed === email)
+              return;
             setFields("email", trimmed);
           });
         }}
@@ -57,7 +58,8 @@ function EmailField() {
 
 function PasswordField() {
   const [_isPending, startTransition] = useTransition();
-  const { password, setFields } = useFields();
+  const password = useFields((state) => state.password);
+  const setFields = useFields((state) => state.setFields);
 
   return (
     <View style={{ width: "100%" }}>
@@ -69,7 +71,11 @@ function PasswordField() {
         onChangeText={(text) => {
           startTransition(() => {
             const trimmed = text.trimStart();
-            if (trimmed.length === 0 && text.length > 0) return;
+            if (
+              (trimmed.length === 0 && text.length > 0) ||
+              trimmed === password
+            )
+              return;
             setFields("password", trimmed);
           });
         }}
@@ -82,16 +88,22 @@ function PasswordField() {
 }
 
 function SubmitButton() {
-  const { email, password } = useFields();
+  const [disabled, setDisabled] = useState(false);
+  const email = useFields((state) => state.email);
+  const password = useFields((state) => state.password);
   const { signIn } = useAuth()!;
 
   return (
     <Button
       mode="contained"
       style={{ width: "100%", borderRadius: 12 }}
-      onPress={() =>
-        handleAsync(() => signIn(object2formData({ email, password })))
-      }
+      disabled={disabled}
+      onPress={() => {
+        handleAsync(() => {
+          setDisabled(true);
+          signIn(object2formData({ email, password }));
+        }).finally(() => setDisabled(false));
+      }}
     >
       Submit
     </Button>
@@ -100,7 +112,7 @@ function SubmitButton() {
 
 export default function SignUp({ navigation }: Props) {
   const theme = useTheme();
-  const { reset } = useFields();
+  const reset = useFields((state) => state.reset);
 
   useEffect(() => {
     return () => {

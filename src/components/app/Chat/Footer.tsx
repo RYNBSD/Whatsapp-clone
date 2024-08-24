@@ -4,7 +4,7 @@ import { IconButton, Searchbar, Text } from "react-native-paper";
 import { MaterialIcons } from "@expo/vector-icons";
 import { getDocumentAsync } from "expo-document-picker";
 import { readAsStringAsync } from "expo-file-system";
-import { memo, useTransition } from "react";
+import { memo, useEffect, useTransition } from "react";
 import { Buffer } from "buffer";
 import { handleAsync, millis2time } from "../../../util";
 import { useAudio, useSocket } from "../../../context";
@@ -20,9 +20,24 @@ function VoiceTimer() {
 }
 
 function MessageInput({ user }: { user: User }) {
+  const setMessage = useMessage((state) => state.setMessage);
+  const message = useMessage((state) => state.message);
   const [_isPending, startTransition] = useTransition();
-  const { message, setMessage } = useMessage();
   const { socket } = useSocket()!;
+
+  useEffect(() => {
+    socket.emit("typing", {
+      to: user.id,
+      length: message.length,
+    });
+
+    return () => {
+      socket.emit("typing", {
+        to: user.id,
+        length: 0,
+      });
+    };
+  }, [message, socket, user.id]);
 
   return (
     <Searchbar
@@ -31,11 +46,8 @@ function MessageInput({ user }: { user: User }) {
       onChangeText={(text) => {
         startTransition(() => {
           const trimmed = text.trimStart();
-          socket.emit("typing", {
-            to: user.id,
-            length: trimmed.length,
-          });
-          if (trimmed.length === 0 && text.length > 0) return;
+          if ((trimmed.length === 0 && text.length > 0) || trimmed === message)
+            return;
           setMessage(trimmed);
         });
       }}
@@ -70,7 +82,7 @@ function MessageInput({ user }: { user: User }) {
                               ? "audio"
                               : "file",
                       };
-                    }),
+                    })
                   );
                   files.forEach((file) => {
                     socket.volatile.emit("message", {
@@ -99,7 +111,8 @@ function ChatInput({ user }: { user: User }) {
 }
 
 function SendIcon({ user }: { user: User }) {
-  const { message, setMessage } = useMessage();
+  const setMessage = useMessage((state) => state.setMessage);
+  const message = useMessage((state) => state.message);
   const { socket } = useSocket()!;
 
   return (
@@ -156,7 +169,7 @@ function MicIcon({ user }: { user: User }) {
 }
 
 function ChatAction({ user }: { user: User }) {
-  const { message } = useMessage();
+  const message = useMessage((state) => state.message);
   return message.length === 0 ? (
     <MicIcon user={user} />
   ) : (

@@ -1,11 +1,29 @@
 import { createMaterialBottomTabNavigator } from "react-native-paper/react-navigation";
 import { type ReactNode, useState } from "react";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Appbar, Menu } from "react-native-paper";
 import { useAuth, useCamera } from "../../../context";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { handleAsync } from "../../../util";
 
 const BottomTap = createMaterialBottomTabNavigator();
+
+function SignOutMenuItem() {
+  const [disabled, setDisabled] = useState(false);
+  const { signOut } = useAuth()!;
+  return (
+    <Menu.Item
+      disabled={disabled}
+      title="Sign out"
+      onPress={() =>
+        handleAsync(async () => {
+          setDisabled(false);
+          await signOut();
+        }).finally(() => setDisabled(true))
+      }
+    />
+  );
+}
 
 function AppBarMenu({ children }: { children: ReactNode }) {
   const safeAreaInsets = useSafeAreaInsets();
@@ -38,7 +56,6 @@ export default function App() {
   const { open, checkPermission: checkCameraPermission } = useCamera()!;
   // const { checkPermission: checkAudioPermission } = useAudio()!;
   // const { checkPermission: checkMediaLibraryPermission } = useMediaLibrary()!;
-  const { signOut } = useAuth()!;
 
   return (
     <>
@@ -61,7 +78,7 @@ export default function App() {
           )}
         />
         <AppBarMenu>
-          <Menu.Item title="Sign out" onPress={signOut} />
+          <SignOutMenuItem />
         </AppBarMenu>
       </Appbar.Header>
       <BottomTap.Navigator>

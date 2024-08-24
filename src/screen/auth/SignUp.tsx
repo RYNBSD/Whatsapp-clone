@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Alert, View } from "react-native";
 import {
   TextInput,
@@ -9,11 +9,7 @@ import {
   HelperText,
   TouchableRipple,
 } from "react-native-paper";
-import {
-  type ImagePickerAsset,
-  launchImageLibraryAsync,
-  MediaTypeOptions,
-} from "expo-image-picker";
+import { launchImageLibraryAsync, MediaTypeOptions } from "expo-image-picker";
 import { Image } from "expo-image";
 import { create } from "zustand";
 import isEmail from "validator/lib/isEmail";
@@ -44,22 +40,21 @@ const useFields = create<
   country: "",
   phone: "",
   password: "",
-  setFields: (key: keyof Fields, text: string) =>
-    set((state) => ({ ...state, [key]: text })),
+  setFields: (key: keyof Fields, text: string) => set({ [key]: text }),
   reset: () =>
-    set((state) => ({
-      ...state,
+    set({
       username: "",
       email: "",
       country: "",
       phone: "",
       password: "",
-    })),
+    }),
 }));
 
 function ImagePicker() {
   const theme = useTheme();
-  const { image, setImage } = useImagePicker();
+  const image = useImagePicker((state) => state.image);
+  const setImage = useImagePicker((state) => state.setImage);
   return (
     <TouchableRipple
       rippleColor={theme.colors.background}
@@ -85,7 +80,8 @@ function ImagePicker() {
 
 function UsernameField() {
   const [_isPending, startTransition] = useTransition();
-  const { username, setFields } = useFields();
+  const username = useFields((state) => state.username);
+  const setFields = useFields((state) => state.setFields);
 
   return (
     <View style={{ width: "100%" }}>
@@ -96,7 +92,11 @@ function UsernameField() {
         onChangeText={(text) => {
           startTransition(() => {
             const trimmed = text.trimStart();
-            if (trimmed.length === 0 && text.length > 0) return;
+            if (
+              (trimmed.length === 0 && text.length > 0) ||
+              trimmed === username
+            )
+              return;
             setFields("username", trimmed);
           });
         }}
@@ -110,7 +110,8 @@ function UsernameField() {
 
 function EmailField() {
   const [_isPending, startTransition] = useTransition();
-  const { email, setFields } = useFields();
+  const email = useFields((state) => state.email);
+  const setFields = useFields((state) => state.setFields);
 
   return (
     <View style={{ width: "100%" }}>
@@ -121,7 +122,8 @@ function EmailField() {
         onChangeText={(text) => {
           startTransition(() => {
             const trimmed = text.trimStart();
-            if (trimmed.length === 0 && text.length > 0) return;
+            if ((trimmed.length === 0 && text.length > 0) || trimmed === email)
+              return;
             setFields("email", trimmed);
           });
         }}
@@ -135,7 +137,9 @@ function EmailField() {
 
 function PhoneField() {
   const [_isPending, startTransition] = useTransition();
-  const { country, phone, setFields } = useFields();
+  const country = useFields((state) => state.country);
+  const phone = useFields((state) => state.phone);
+  const setFields = useFields((state) => state.setFields);
 
   return (
     <View style={{ width: "100%" }}>
@@ -148,7 +152,11 @@ function PhoneField() {
           onChangeText={(text) => {
             startTransition(() => {
               const trimmed = text.trimStart();
-              if (trimmed.length === 0 && text.length > 0) return;
+              if (
+                (trimmed.length === 0 && text.length > 0) ||
+                trimmed === country
+              )
+                return;
               setFields("country", trimmed);
             });
           }}
@@ -161,7 +169,11 @@ function PhoneField() {
           onChangeText={(text) => {
             startTransition(() => {
               const trimmed = text.trimStart();
-              if (trimmed.length === 0 && text.length > 0) return;
+              if (
+                (trimmed.length === 0 && text.length > 0) ||
+                trimmed === phone
+              )
+                return;
               setFields("phone", trimmed);
             });
           }}
@@ -176,7 +188,8 @@ function PhoneField() {
 
 function PasswordField() {
   const [_isPending, startTransition] = useTransition();
-  const { password, setFields } = useFields();
+  const password = useFields((state) => state.password);
+  const setFields = useFields((state) => state.setFields);
 
   return (
     <View style={{ width: "100%" }}>
@@ -188,7 +201,11 @@ function PasswordField() {
         onChangeText={(text) => {
           startTransition(() => {
             const trimmed = text.trimStart();
-            if (trimmed.length === 0 && text.length > 0) return;
+            if (
+              (trimmed.length === 0 && text.length > 0) ||
+              trimmed === password
+            )
+              return;
             setFields("password", trimmed);
           });
         }}
@@ -201,20 +218,25 @@ function PasswordField() {
 }
 
 function SubmitButton() {
+  const [disabled, setDisabled] = useState(false);
   const { signUp } = useAuth()!;
-  const { image } = useImagePicker();
-  const { username, email, country, phone, password } = useFields();
+  const image = useImagePicker((state) => state.image);
+  const username = useFields((state) => state.username);
+  const email = useFields((state) => state.email);
+  const country = useFields((state) => state.country);
+  const phone = useFields((state) => state.phone);
+  const password = useFields((state) => state.password);
 
   return (
     <Button
       mode="contained"
       style={{ width: "100%", borderRadius: 12 }}
+      disabled={disabled}
       onPress={async () => {
         await handleAsync(async () => {
-          if (image === null) {
-            Alert.alert("Missing", "Make sure to add image");
-            return;
-          }
+          setDisabled(true);
+          if (image === null)
+            return Alert.alert("Missing", "Make sure to add image");
 
           const formData = object2formData({
             username,
@@ -231,7 +253,7 @@ function SubmitButton() {
           });
 
           await signUp(formData);
-        });
+        }).finally(() => setDisabled(false));
       }}
     >
       Submit
@@ -241,8 +263,8 @@ function SubmitButton() {
 
 export default function SignUp({ navigation }: Props) {
   const theme = useTheme();
-  const { reset: imagePickerReset } = useImagePicker();
-  const { reset: fieldsReset } = useFields();
+  const imagePickerReset = useImagePicker((state) => state.reset);
+  const fieldsReset = useFields((state) => state.reset);
 
   useEffect(() => {
     return () => {

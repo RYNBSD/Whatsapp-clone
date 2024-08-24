@@ -7,7 +7,6 @@ export const useImagePicker = create<{
   reset: () => void;
 }>((set) => ({
   image: null,
-  setImage: (image: ImagePickerAsset | null) =>
-    set((state) => ({ ...state, image })),
-  reset: () => set((state) => ({ ...state, image: null })),
+  setImage: (image: ImagePickerAsset | null) => set({ image }),
+  reset: () => set({ image: null }),
 }));
